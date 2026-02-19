@@ -1,0 +1,10 @@
+# Raw data files — not included (patient privacy)
+data/
+
+# Large cohort CSVs — not included
+abandonment_cohort*.csv
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo

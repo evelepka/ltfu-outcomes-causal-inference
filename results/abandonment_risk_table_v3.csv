@@ -1,0 +1,35 @@
+outcome,stratum,subgroup,n,risk_1yr_%,risk_2yr_%,risk_3yr_%
+Re-notification,Overall,All,29784,35.2,40.1,42.6
+Death,Overall,All,29784,3.2,5.1,6.4
+Re-notification,Age group,<18,857,28.5,31.9,33.5
+Re-notification,Age group,18–34,14725,35.1,40.1,42.7
+Re-notification,Age group,35–49,9982,37.3,42.7,45.5
+Re-notification,Age group,50–64,3362,33.5,37.6,40.0
+Re-notification,Age group,65+,837,25.3,26.9,28.1
+Re-notification,Age group,Unknown,21,15.4,15.4,15.4
+Death,Age group,<18,857,0.8,1.3,2.2
+Death,Age group,18–34,14725,2.1,3.6,4.5
+Death,Age group,35–49,9982,4.0,6.2,7.9
+Death,Age group,50–64,3362,5.6,8.5,10.3
+Death,Age group,65+,837,5.9,9.5,12.0
+Death,Age group,Unknown,21,0.0,0.0,0.0
+Re-notification,Sex,Male,23516,34.9,39.9,42.6
+Re-notification,Sex,Female,6268,36.1,40.9,42.9
+Death,Sex,Male,23516,3.1,4.9,6.2
+Death,Sex,Female,6268,3.4,5.8,7.2
+Re-notification,HIV/AIDS status,AIDS,3431,49.0,54.8,57.7
+Re-notification,HIV/AIDS status,HIV+,334,44.1,49.1,51.5
+Re-notification,HIV/AIDS status,HIV-,21171,34.1,39.0,41.5
+Re-notification,HIV/AIDS status,Unknown/not tested,4848,29.2,33.8,36.2
+Death,HIV/AIDS status,AIDS,3431,9.2,13.9,16.5
+Death,HIV/AIDS status,HIV+,334,7.2,10.9,12.5
+Death,HIV/AIDS status,HIV-,21171,2.2,3.6,4.7
+Death,HIV/AIDS status,Unknown/not tested,4848,3.1,5.0,6.3
+Re-notification,Incarceration,Incarcerated,1944,27.7,32.9,35.2
+Re-notification,Incarceration,Not incarcerated,27840,35.7,40.6,43.2
+Death,Incarceration,Incarcerated,1944,0.9,1.9,2.2
+Death,Incarceration,Not incarcerated,27840,3.4,5.3,6.7
+Re-notification,Housing status,Homeless,3834,39.5,44.5,47.1
+Re-notification,Housing status,Not homeless,25950,34.5,39.5,42.0
+Death,Housing status,Homeless,3834,5.6,8.2,10.7
+Death,Housing status,Not homeless,25950,2.9,4.7,5.8
