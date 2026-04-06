@@ -1,0 +1,125 @@
+Effect of Retreatment Timing on Post-Retreatment Mortality
+========================================================
+
+Reference Group for Timing: Very Late (>3 years)
+
+                                                                     coef
+time_to_rn_cat3. Late (1-3 years)                             0.256409859
+time_to_rn_cat2. Intermediate (6-12 months)                   0.151429627
+time_to_rn_cat1. Early (0-6 months)                           0.154945667
+itt_groupLoss to follow-up                                    0.201823783
+age_group25-44                                                0.253970360
+age_group45-64                                                0.852993656
+age_group65+                                                  1.266603407
+sexMale                                                      -0.073888685
+raceBlack or Mixed                                            0.127663580
+raceOther                                                    -1.458039465
+education8 - 11 years                                         0.197099208
+education≤ 7 years                                            0.206848240
+educationNone                                                -0.100254782
+hiv_aidsPositive                                              0.530441241
+diabetesYes                                                   0.310788391
+alcoholYes                                                    0.172487624
+drug_use_statYes                                              0.091214433
+incarcerationYes                                             -0.973523949
+homelessnessYes                                               0.391500356
+hosp_admissionYes                                             1.406794089
+clinical_classifExtrapulmonary                               -0.240846901
+clinical_classifPulmonary and Extrapulmonary or disseminated -0.001053457
+supervised_therapyYes                                        -0.535462949
+                                                             exp(coef)
+time_to_rn_cat3. Late (1-3 years)                            1.2922823
+time_to_rn_cat2. Intermediate (6-12 months)                  1.1634964
+time_to_rn_cat1. Early (0-6 months)                          1.1675945
+itt_groupLoss to follow-up                                   1.2236324
+age_group25-44                                               1.2891336
+age_group45-64                                               2.3466614
+age_group65+                                                 3.5487783
+sexMale                                                      0.9287751
+raceBlack or Mixed                                           1.1361707
+raceOther                                                    0.2326920
+education8 - 11 years                                        1.2178649
+education≤ 7 years                                           1.2297959
+educationNone                                                0.9046069
+hiv_aidsPositive                                             1.6996821
+diabetesYes                                                  1.3645005
+alcoholYes                                                   1.1882571
+drug_use_statYes                                             1.0955039
+incarcerationYes                                             0.3777495
+homelessnessYes                                              1.4791985
+hosp_admissionYes                                            4.0828452
+clinical_classifExtrapulmonary                               0.7859619
+clinical_classifPulmonary and Extrapulmonary or disseminated 0.9989471
+supervised_therapyYes                                        0.5853982
+                                                               se(coef)
+time_to_rn_cat3. Late (1-3 years)                            0.15999468
+time_to_rn_cat2. Intermediate (6-12 months)                  0.16762653
+time_to_rn_cat1. Early (0-6 months)                          0.14927831
+itt_groupLoss to follow-up                                   0.09544357
+age_group25-44                                               0.13685870
+age_group45-64                                               0.14754581
+age_group65+                                                 0.21889581
+sexMale                                                      0.09673077
+raceBlack or Mixed                                           0.08621920
+raceOther                                                    1.00275921
+education8 - 11 years                                        0.17377446
+education≤ 7 years                                           0.17146350
+educationNone                                                0.32342633
+hiv_aidsPositive                                             0.09937625
+diabetesYes                                                  0.15407513
+alcoholYes                                                   0.09561374
+drug_use_statYes                                             0.09867003
+incarcerationYes                                             0.24849408
+homelessnessYes                                              0.11822318
+hosp_admissionYes                                            0.10031281
+clinical_classifExtrapulmonary                               0.14708751
+clinical_classifPulmonary and Extrapulmonary or disseminated 0.17731817
+supervised_therapyYes                                        0.08815581
+                                                                        z
+time_to_rn_cat3. Late (1-3 years)                             1.602614900
+time_to_rn_cat2. Intermediate (6-12 months)                   0.903375079
+time_to_rn_cat1. Early (0-6 months)                           1.037965040
+itt_groupLoss to follow-up                                    2.114587435
+age_group25-44                                                1.855712213
+age_group45-64                                                5.781212280
+age_group65+                                                  5.786330164
+sexMale                                                      -0.763859137
+raceBlack or Mixed                                            1.480686232
+raceOther                                                    -1.454027496
+education8 - 11 years                                         1.134224273
+education≤ 7 years                                            1.206368899
+educationNone                                                -0.309977184
+hiv_aidsPositive                                              5.337706243
+diabetesYes                                                   2.017122394
+alcoholYes                                                    1.804004593
+drug_use_statYes                                              0.924439066
+incarcerationYes                                             -3.917694717
+homelessnessYes                                               3.311536232
+hosp_admissionYes                                            14.024072293
+clinical_classifExtrapulmonary                               -1.637439459
+clinical_classifPulmonary and Extrapulmonary or disseminated -0.005941053
+supervised_therapyYes                                        -6.074051981
+                                                                 Pr(>|z|)
+time_to_rn_cat3. Late (1-3 years)                            1.090197e-01
+time_to_rn_cat2. Intermediate (6-12 months)                  3.663269e-01
+time_to_rn_cat1. Early (0-6 months)                          2.992863e-01
+itt_groupLoss to follow-up                                   3.446513e-02
+age_group25-44                                               6.349459e-02
+age_group45-64                                               7.416424e-09
+age_group65+                                                 7.194075e-09
+sexMale                                                      4.449512e-01
+raceBlack or Mixed                                           1.386902e-01
+raceOther                                                    1.459387e-01
+education8 - 11 years                                        2.567005e-01
+education≤ 7 years                                           2.276753e-01
+educationNone                                                7.565783e-01
+hiv_aidsPositive                                             9.412980e-08
+diabetesYes                                                  4.368274e-02
+alcoholYes                                                   7.123059e-02
+drug_use_statYes                                             3.552578e-01
+incarcerationYes                                             8.939983e-05
+homelessnessYes                                              9.278522e-04
+hosp_admissionYes                                            1.110549e-44
+clinical_classifExtrapulmonary                               1.015387e-01
+clinical_classifPulmonary and Extrapulmonary or disseminated 9.952598e-01
+supervised_therapyYes                                        1.247223e-09
