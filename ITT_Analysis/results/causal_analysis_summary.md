@@ -14,14 +14,39 @@ To break this confounding by indication, we fit highly granular **Marginal Struc
 ## 2. Depletion of Susceptibles (Target Trial Emulations)
 Because traditional survival models are mathematically biased to view late abandoners as artificially "healthy" (they lived long enough to abandon at month 5), we explicitly isolated the precise hazard of abandonment utilizing **Sequential Target Trial Emulations**. To account for severe non-proportional hazards relative to follow up, we tightened the administrative follow-up window strictly to **2 years** post target-trial enrollment to capture the true acute penalty of unsterilized progression.
 
-- **Finding:** Comparing dropouts dynamically mapped against strictly matched compliant controls, the penalty of dropping out remains staggering regardless of timing. Patients abandoning in the first 30 days present a 2-year baseline hazard ratio of **2.42**. This intense relative hazard penalty persists aggressively throughout the treatment course, punishing patients abandoning at Month 4 (aHR ~3.12) as extensively as those leaving earlier. 
+- **Finding:** Comparing dropouts dynamically mapped against strictly matched compliant controls, the penalty of dropping out remains staggering regardless of timing. Patients abandoning in the first 30 days present a 2-year baseline hazard ratio of **2.42**. This intense relative hazard penalty persists aggressively throughout the treatment course.
+
+### Table 1: 2-Year Target Trial Penalty by Month of Dropout
+| Month of Dropout | Relative Penalty (aHR)* | 
+| :--- | :--- | 
+| **Month 1** (Reference) | 2.42 (95% CI: 1.93 - 3.05) | 
+| **Month 2** | 3.24 | 
+| **Month 3** | 3.05 | 
+| **Month 4** | 3.12 | 
+| **Month 5** | 2.95 | 
+| **Month 6** | 2.08 | 
+
+*(Note: aHR for Months 2-6 reflect the target trial interaction compounding the baseline Month 1 reference hazard)*
 
 ## 3. The Competing Risks Paradigm (Subgroup Target Trial Penalty)
-To test structurally vulnerable populations against baseline healthy cohorts, we ran Explicit Subgroup Effects Models explicitly inside the unified 6-Month robust **Target Trial Emulation**. This permanently isolated our subgroup discoveries from any immortal time violations.
+To test structurally vulnerable populations against baseline healthy cohorts, we ran explicit Subgroup Effects Models directly inside the unified 6-Month robust **Target Trial Emulation**. This permanently isolated our subgroup discoveries from any immortal time violations.
 
 We discovered that the mathematical consequence of abandoning treatment is paradoxically harshest on the healthiest components of society:
-- **Age Gradient:** Dropping out of treatment punishes young people (ages 15-24) with an immense **aHR 3.40**. Older patients (45-64) face a smaller comparative hazard (aHR 2.54) simply because their absolute baseline risk of death from non-TB causes blunts the statistical magnitude of the TB-specific shock.
+- **Age Gradient:** Dropping out of treatment punishes young people (ages 15-24) with an immense **aHR 3.40**, whereas older patients face a smaller comparative hazard (aHR 2.54) simply because their absolute baseline risk of death from non-TB causes blunts the statistical magnitude of the TB-specific shock.
 - **Homelessness:** Homeless individuals display a massively compressed relative penalty (aHR 1.72) specifically because their absolute competing background mortality overrides the TB penalty, while stably-housed peers suffer a brutal aHR 3.36 when choosing to quit.
-- **HIV Errata:** While crude models implied HIV+ patients suffer a blunted penalty, explicitly forcing the interaction into the Target Trial matching *equalized* the hazards perfectly across biological status (HIV- aHR 2.90 vs HIV+ aHR 2.73, p=0.21). The previously suspected phenomenon was purely an artifact of skewed longitudinal drop-out timing.
+- **HIV Equality:** While prior crude models implied HIV+ patients suffer a blunted penalty, explicitly forcing the interaction into the sequential Target Trial matching *equalized* the hazards perfectly across biological status (p=0.21). 
+
+### Table 2: Competing Risks Penalty Mapping (Target Trial Interactions)
+| Subgroup | Level | aHR Penalty for Abandoning | 95% CI | Interaction p-value |
+| :--- | :--- | :--- | :--- | :--- |
+| **Age** | 15-24 | 3.40 | 2.64 - 4.37 | < 0.001 |
+| | 25-44 | 2.98 | 2.68 - 3.32 | |
+| | 45-64 | 2.54 | 2.20 - 2.93 | |
+| **Homelessness** | No | 3.36 | 3.09 - 3.65 | < 0.001 |
+| | Yes | 1.72 | 1.44 - 2.05 | |
+| **Sex** | Female | 2.91 | 2.45 - 3.45 | 0.015 |
+| | Male | 2.84 | 2.60 - 3.11 | |
+| **HIV/AIDS** | Negative | 2.90 | 2.64 - 3.19 | 0.212 |
+| | Positive | 2.73 | 2.37 - 3.15 | |
 
 **Conclusion:** Treating TB requires a structurally holistic view. Marginalized groups suffer overwhelming absolute baseline mortality irrespective of their specific TB treatment compliance, forcing mathematical tools to underestimate the public health impact if competing background survival is ignored.
