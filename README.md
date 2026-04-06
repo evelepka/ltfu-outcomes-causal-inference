@@ -1,93 +1,46 @@
 # Outcomes After TB Treatment Abandonment
 
-Survival analysis of re-notification and mortality risk following tuberculosis (TB) treatment abandonment in Brazil, using SINAN surveillance data (2013–2024).
+Causal epidemiological analysis of retreatment and long-term mortality following tuberculosis (TB) treatment abandonment in São Paulo, Brazil (2013–2023).
 
 ## Research Question
 
-Among individuals who abandoned TB treatment, what is the cumulative risk of:
-1. **Re-entering the TB notification system** (re-notification / retreatment)?
-2. **Dying** — at 1, 2, and 3 years after abandonment?
+Historically, evaluating the mortality impact of TB treatment abandonment is confounded by immortal time bias (late abandoners appear falsely protected) and symptomatic presentation bias (returning to care falsely appears harmful). This repository utilizes advanced causal inference modeling to answer:
+1. What is the true mortality penalty of abandoning TB therapy over the 6-month treatment course? 
+2. Does returning to therapy rescue patients, or does it serve as a proxy for clinical deterioration?
+3. Which patient subpopulations disproportionately suffer the relative mortality penalties of abandonment?
 
-And how do these risks vary by age, sex, HIV/AIDS status, incarceration, homelessness, and the treatment month at which abandonment occurred?
+## Key Findings (Causal Analysis Phase)
 
-## Key Findings
-
-**Overall cohort: N = 29,784 individuals with a first abandonment episode**
-
-| Outcome | 1 year | 2 years | 3 years |
-|---|---|---|---|
-| Re-notification | 35.2% | 40.1% | 42.6% |
-| Death (comprehensive) | 3.2% | 5.1% | 6.4% |
-
-**Highest-risk subgroups:**
-- **AIDS patients:** 49% re-notification and 16.5% death at 3 years
-- **Homeless individuals:** 47% re-notification and 10.7% death at 3 years  
-- **Month 2 abandonees** have the highest re-notification risk (~61% at 3yr)
-- **Month 1 abandonees** have the highest death risk (6.6% at 1yr)
-
-## Methods Summary
-
-- **Index event:** First abandonment episode per individual (`case_outcome` = "Abandono" / "Abandono Primario")
-- **Time zero:** `end_date` (treatment outcome date)
-- **Administrative censoring:** December 31, 2024
-- **Re-notification estimator:** Aalen-Johansen CIF (death is a competing event)
-- **Death estimator:** 1 − Kaplan-Meier (re-notification does NOT censor; individuals followed through subsequent episodes)
-- **Death ascertainment:** `dod` field + `case_outcome` ∈ {"Obito TB", "Obito NTB"} — combined for ~4.6× more deaths than `dod` alone
-
-See [`METHODS.md`](METHODS.md) for full reproducible technical description.
+**Overall ITT cohort:** 172,463 individuals successfully initiating therapy, of which 21,619 (12.5%) abandoned treatment.
+- **The Paradox of Retreatment:** Among those who abandoned, 43.8% re-entered treatment. Using Marginal Structural Models (MSM) with Inverse Probability Weighting (IPW), returning to care carried an **overwhelming 5-fold increase in mortality (aHR ~5.0)**. Returning to care functions not as a protective behavior, but as a distress beacon for severe, acute disease progression.
+- **Sequential Target Trials:** To eliminate immortal time bias, we compared abandoners explicitly against mathematically matched patients who remained *actively on therapy*. Patients abandoning as late as **Month 4 still suffered a 2.26-fold relative mortality risk**, proving late abandonment is catastrophic.
+- **Competing Risks (Effect Modification):** Subgroup interaction models revealed the mathematical penalty for abandoning is actually *worse* for healthy populations (age 15-24 HR 4.14 vs. age 45-64 HR 1.92). Marginalized populations (homeless, HIV+) suffer such overwhelming absolute baseline mortality irrespective of treatment that their relative penalty for dropping out is mechanically blunted.
 
 ## Repository Structure
 
+The full codebase bridges initial Python-based geographic forecasting with rigorous R-based causal survival modeling.
+
 ```
-├── 00_clean_sinan.py                    # Step 1: SINAN ID cleaning & zero-padding
-├── 04_abandonment_full_analysis.py      # Step 2+: Main analysis (all figures & tables)
-├── METHODS.md                           # Full technical methods document
-├── figures/                             # All output figures (PNG)
-│   ├── cif_renotification_overall_v2.png
-│   ├── cif_death_overall_v2.png
-│   ├── cif_renotification_by_age_group_v2.png
-│   ├── cif_death_by_age_group_v2.png
-│   ├── cif_renotification_by_hiv_grp_v2.png
-│   ├── cif_death_by_hiv_grp_v2.png
-│   ├── cif_renotification_by_incarcerated_v2.png
-│   ├── cif_death_by_incarcerated_v2.png
-│   ├── cif_renotification_by_homeless_v2.png
-│   ├── cif_death_by_homeless_v2.png
-│   ├── cif_renotification_by_sex_grp_v2.png
-│   ├── cif_death_by_sex_grp_v2.png
-│   ├── cif_renotification_by_tx_month_v2.png
-│   ├── cif_death_by_tx_month_v2.png
-│   └── tx_month_distribution_v2.png
-└── results/                             # Risk tables (CSV)
-    ├── abandonment_risk_table_v3.csv    # Risks by demographic/clinical strata
-    └── abandonment_risk_table_txmonth_v3.csv  # Risks by treatment month
+├── ITT_Analysis/
+│   ├── scripts/
+│   │   ├── 01_itt_cohort_selection.py           # Cohort harmonization
+│   │   ├── 05_itt_g_formula_analysis.R          # Parametric G-Computation
+│   │   ├── 24_itt_ltfu_msm_ipw.R                # Retreatment Marginal Structural Models
+│   │   ├── 30_itt_target_trial_rolling.R        # Sequential Month-by-Month Emulation
+│   │   └── 31_itt_ltfu_subgroup_interactions.R  # Effect modification & Competing risks
+│   └── results/                                 # Walkthrough PDFs, KM datasets, and Figures
+├── 00_clean_sinan.py                            # Legacy ID cleaning and harmonization
+├── 04_abandonment_full_analysis.py              # Legacy raw survival outputs
+└── METHODS.md                                   # Legacy description
 ```
 
-## Data
-
-The raw data (`Final table.csv`) is from SINAN (Brazil's TB notification system) and is **not included** in this repository due to patient privacy. The cleaned cohort files are also excluded.  
-
-To reproduce the analysis, place the raw CSV at the path specified in `00_clean_sinan.py` and run the scripts in order.
-
-## Exploratory / Superseded Scripts
-
-These earlier scripts are retained for transparency but are superseded by `04_abandonment_full_analysis.py`:
-- `01_abandonment_survival.py` — initial analysis (death as competing risk only)
-- `02_abandonment_stratified.py` — v1 stratified analysis (dod field only)
-- `03_abandonment_by_tx_month.py` — tx-month analysis (dod field only)
+## Abstract Synthesis
+For a complete, print-ready synthesis of the advanced causal findings, please see `ITT_Analysis/results/causal_analysis_summary.pdf`.
 
 ## Dependencies
-
-```
-python >= 3.9
-pandas
-numpy
-matplotlib
-```
-
-No external survival analysis packages are required — all estimators are implemented from scratch.
+- **R**: `survival`, `dplyr`, `broom`, `survivalROC`
+- **Python >= 3.9**: `pandas`, `numpy`, `matplotlib`
 
 ## Citation / Contact
-
 Jason Andrews Lab, Stanford University  
-Analysis performed February 2026.
+Analysis finalized April 2026.
