@@ -42,5 +42,5 @@ For a complete, print-ready synthesis of the advanced causal findings, please se
 - **Python >= 3.9**: `pandas`, `numpy`, `matplotlib`
 
 ## Citation / Contact
-Jason Andrews Lab, Stanford University  
+Evelyn Lepka de Lima and Jason Andrews  
 Analysis finalized April 2026.
