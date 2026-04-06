@@ -48,7 +48,9 @@ for (m in 1:6) {
       # Exposed: Abandoned between 'start' and 'end'
       expose = ifelse(itt_group == "Loss to follow-up" & tx_duration_yrs >= start_yrs & tx_duration_yrs < end_yrs, 1, 0),
       trial_month = paste0("Month_", m),
-      time_followup = time_d - start_yrs
+      time_followup = time_d - start_yrs,
+      event_d = ifelse(time_followup > 2.0, 0, event_d),
+      time_followup = ifelse(time_followup > 2.0, 2.0, time_followup)
     )
   
   trial_list[[m]] <- df_trial
