@@ -42,8 +42,8 @@ ltfu <- df_cohort %>% filter(itt_group == "Loss to follow-up")
 ltfu$abandon_months <- as.numeric(difftime(as.Date(ltfu$end_date), as.Date(ltfu$best_start), units="days")) / 30.4
 df_ab <- ltfu %>% filter(abandon_months <= 6 & abandon_months >= 0)
 
-# 2. Timing of Retreatment (Years 0-2)
-df_rn <- ltfu %>% filter(event_rn == 1 & time_rn <= 2)
+# 2. Timing of Retreatment (Years 0-12)
+df_rn <- ltfu %>% filter(event_rn == 1 & time_rn <= 12)
 
 # 3. Timing of Death (Years 0-12)
 df_d <- ltfu %>% filter(event_d == 1 & time_d <= 12)
@@ -72,7 +72,7 @@ build_raincloud <- function(df, x_var, x_label, title_text, col_fill, x_limits, 
 }
 
 pRain1 <- build_raincloud(df_ab, "abandon_months", "Months to Abandonment", "Timing of Abandonment", "#e74c3c", c(0, 6), seq(0, 6, 1))
-pRain2 <- build_raincloud(df_rn, "time_rn", "Years to Retreatment", "Timing of Return to Care", "#f1c40f", c(0, 2), seq(0, 2, 0.5))
+pRain2 <- build_raincloud(df_rn, "time_rn", "Years to Retreatment", "Timing of Return to Care", "#f1c40f", c(0, 12), seq(0, 12, 2))
 pRain3 <- build_raincloud(df_d, "time_d", "Years to Death", "Timing of Mortality", "#2c3e50", c(0, 12), seq(0, 12, 2))
 
 pA <- arrangeGrob(
