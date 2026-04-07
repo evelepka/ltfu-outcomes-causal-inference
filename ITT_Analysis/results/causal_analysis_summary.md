@@ -14,19 +14,18 @@ To break this confounding by indication, we fit highly granular **Marginal Struc
 ## 2. Depletion of Susceptibles (Target Trial Emulations)
 Because traditional survival models are mathematically biased to view late abandoners as artificially "healthy" (they lived long enough to abandon at month 5), we explicitly isolated the precise hazard of abandonment utilizing **Sequential Target Trial Emulations**. To account for severe non-proportional hazards relative to follow up, we tightened the administrative follow-up window strictly to **2 years** post target-trial enrollment to capture the true acute penalty of unsterilized progression.
 
-- **Finding:** Comparing dropouts dynamically mapped against strictly matched compliant controls, the penalty of dropping out remains staggering regardless of timing. Patients abandoning in the first 30 days present a 2-year baseline hazard ratio of **2.42**. This intense relative hazard penalty persists aggressively throughout the treatment course.
+- **Finding:** Comparing dropouts dynamically mapped against strictly matched compliant controls, the penalty of dropping out remains staggering regardless of timing. Patients abandoning in the first 30 days present a 2-year baseline hazard ratio of **2.08**. This intense relative hazard penalty persists aggressively throughout the treatment course.
+
 
 ### Table 1: 2-Year Target Trial Penalty by Month of Dropout
-| Month of Dropout | Relative Penalty (aHR)* | 
-| :--- | :--- | 
-| **Month 1** (Reference) | 2.42 (95% CI: 1.93 - 3.05) | 
-| **Month 2** | 3.24 | 
-| **Month 3** | 3.05 | 
-| **Month 4** | 3.12 | 
-| **Month 5** | 2.95 | 
-| **Month 6** | 2.08 | 
-
-*(Note: aHR for Months 2-6 reflect the target trial interaction compounding the baseline Month 1 reference hazard)*
+| Month of Dropout | Relative Penalty (aHR) | 95% CI |
+| :--- | :--- | :--- |
+| **Month 1** | 2.08 | 1.67 - 2.58 |
+| **Month 2** | 3.22 | 2.78 - 3.74 |
+| **Month 3** | 3.11 | 2.64 - 3.66 |
+| **Month 4** | 3.26 | 2.73 - 3.88 |
+| **Month 5** | 3.16 | 2.59 - 3.86 |
+| **Month 6** | 2.21 | 1.70 - 2.87 |
 
 ## 3. The Competing Risks Paradigm (Subgroup Target Trial Penalty)
 To test structurally vulnerable populations against baseline healthy cohorts, we ran explicit Subgroup Effects Models directly inside the unified 6-Month robust **Target Trial Emulation**. This permanently isolated our subgroup discoveries from any immortal time violations.
