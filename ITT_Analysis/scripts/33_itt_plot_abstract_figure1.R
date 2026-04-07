@@ -30,7 +30,7 @@ df_sub <- df_sub %>%
                       "sex" = "Sex",
                       "hiv_aids" = "HIV/AIDS",
                       "homelessness" = "Homelessness"),
-    Level = factor(Level, levels = c("15-24", "25-44", "45-64", "≥65", "Female", "Male", "Negative", "Positive", "No", "Yes")),
+    Level = factor(Level, levels = c("15-24", "25-44", "45-64", "65+", "Female", "Male", "Negative", "Positive", "No", "Yes")),
     Plot_Group = paste0(Subgroup, "\n(", Interaction_P, ")")
   )
 df_sub$Subgroup <- factor(df_sub$Subgroup, levels = c("Age Group", "Homelessness", "Sex", "HIV/AIDS"))
