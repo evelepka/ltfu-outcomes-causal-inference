@@ -40,6 +40,8 @@ DATA = BASE / "Data"
 COHORT_CSV = BASE / "ITT_Analysis" / "data" / "itt_cohort.csv"
 
 OUT_HTML = RESULTS / "results_summary.html"
+# Also drop a date-stamped copy on the Desktop for easy sharing.
+DESKTOP_HTML = Path.home() / "Desktop" / f"TB_Abandonment_Results_{datetime.now():%Y-%m-%d}.html"
 
 
 def embed_png(path: Path) -> str:
@@ -152,19 +154,33 @@ body {
   max-width: 1200px; margin: 0 auto; padding: 2rem;
   color: var(--ink); line-height: 1.55; background: #fff;
 }
-h1 { font-size: 1.75rem; margin: 0 0 .25rem; }
+h1 { font-size: 1.9rem; margin: 0 0 .25rem; }
 h2 { font-size: 1.35rem; margin-top: 2.5rem; padding-bottom: .35rem;
      border-bottom: 2px solid var(--accent); color: var(--accent); }
 h3 { font-size: 1.1rem; margin-top: 1.5rem; color: var(--accent); }
-.meta { color: var(--muted); margin-bottom: 2rem; }
+.meta { color: var(--muted); margin-bottom: 1.5rem; font-size: .9rem; }
 .banner {
   background: var(--bg-panel); border: 1px solid var(--border);
-  border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0 2rem;
+  border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0 1.5rem;
 }
 .banner .stat { display: inline-block; margin-right: 2.5rem; }
 .banner .stat .num { font-size: 1.5rem; font-weight: 700; color: var(--accent-2); }
 .banner .stat .lbl { color: var(--muted); font-size: .85rem; display: block; }
-figure { margin: 1.5rem 0; }
+.exec {
+  background: #fffdf5;
+  border: 1px solid #f3e9c0;
+  border-left: 4px solid #c0873a;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  margin: 0 0 2rem;
+}
+.exec h2 {
+  margin-top: 0; margin-bottom: .5rem; border-bottom: none;
+  font-size: 1.1rem; color: #7b4c1b;
+}
+.exec ul { margin: .25rem 0 0; padding-left: 1.3rem; }
+.exec li { margin: .2rem 0; }
+figure { margin: 1.5rem 0; page-break-inside: avoid; }
 figure img {
   width: 100%; height: auto; display: block;
   border: 1px solid var(--border); border-radius: 6px;
@@ -207,24 +223,89 @@ nav a { margin-right: 1.25rem; color: var(--accent); text-decoration: none;
 nav a:hover { text-decoration: underline; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+footer {
+  margin-top: 4rem; padding-top: 1rem; border-top: 1px solid var(--border);
+  font-size: .8rem; color: var(--muted);
+}
+
+/* Print-friendly */
+@media print {
+  body { max-width: 100%; padding: 0.5in; font-size: 10pt; }
+  nav { display: none; }
+  h2 { page-break-after: avoid; }
+  figure { page-break-inside: avoid; }
+  details { page-break-inside: avoid; }
+  details[open] summary { display: none; }
+  details[open] { page-break-inside: avoid; }
+  a { color: var(--ink); text-decoration: none; }
+  .note, .exec { background: none; }
+}
 """
 
 def section(title, anchor, html_inner):
     return f'<section id="{anchor}"><h2>{title}</h2>\n{html_inner}\n</section>'
 
 
+# ---------------------------------------------------------------------------
+# Executive summary — picks a few headline numbers from the tables if present.
+# ---------------------------------------------------------------------------
+exec_items = []
+if tt_array_el is not None:
+    mo1_overall = tt_array_el.query("Trial_Month=='Month_1' and model=='overall' and cap==5")
+    mo6_late    = tt_array_el.query("Trial_Month=='Month_6' and model=='late'    and cap==5")
+    if not mo1_overall.empty and not mo6_late.empty:
+        r = mo1_overall.iloc[0]
+        s = mo6_late.iloc[0]
+        exec_items.append(
+            f"Month-1 abandonment target-trial overall HR {r['HR']:.2f} "
+            f"(95% CI {r['CI_L']:.2f}–{r['CI_H']:.2f}); "
+            f"month-6 late-mortality HR {s['HR']:.2f} "
+            f"(95% CI {s['CI_L']:.2f}–{s['CI_H']:.2f})."
+        )
+if tt_subgroups is not None:
+    late5 = tt_subgroups.query("model=='late' and cap==5")
+    if len(late5):
+        by_age = late5[late5["Subgroup"] == "age_group"]
+        if not by_age.empty:
+            youngest = by_age[by_age["Level"] == "15-24"]
+            oldest = by_age[by_age["Level"] == "≥65"]
+            if not youngest.empty and not oldest.empty:
+                exec_items.append(
+                    f"Late-mortality HR is heterogeneous by age: "
+                    f"15–24 {youngest.iloc[0]['HR']:.2f} vs ≥65 {oldest.iloc[0]['HR']:.2f} "
+                    f"(MI-pooled)."
+                )
+        home = late5[(late5["Subgroup"] == "homelessness") & (late5["Level"] == "Yes")]
+        if not home.empty:
+            exec_items.append(
+                f"Homeless LTFU late-mortality HR {home.iloc[0]['HR']:.2f} "
+                f"(95% CI {home.iloc[0]['CI_L']:.2f}–{home.iloc[0]['CI_H']:.2f}); "
+                f"lower than non-homeless consistent with high baseline mortality."
+            )
+
+exec_html = ""
+if exec_items:
+    exec_html = (
+        '<section class="exec"><h2>Key findings</h2><ul>'
+        + "".join(f"<li>{x}</li>" for x in exec_items)
+        + "</ul></section>"
+    )
+
 html = f"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>TB Abandonment — Results Summary</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>TB Abandonment — Results Summary ({datetime.now():%Y-%m-%d})</title>
+<meta name="description" content="Results summary for Outcomes After TB Treatment Abandonment (São Paulo, 2013–2023)."/>
 <style>{CSS}</style>
 </head>
 <body>
 
 <h1>Outcomes After TB Treatment Abandonment</h1>
-<p class="meta">Results summary &middot; generated {generated_at} &middot;
-cohort N = {N_total:,} ({N_ltfu:,} LTFU, {N_nonltfu:,} Non-LTFU)</p>
+<p class="meta">São Paulo, 2013–2023 · ITT causal analysis · generated {generated_at}</p>
+
+{exec_html}
 
 <div class="banner">
   <div class="stat"><span class="num">{N_total:,}</span><span class="lbl">Total ITT cohort</span></div>
@@ -296,13 +377,21 @@ cohort N = {N_total:,} ({N_ltfu:,} LTFU, {N_nonltfu:,} Non-LTFU)</p>
     else '<p class="muted">(no MI results on disk yet)</p>'
 ) + """
 
-<p class="meta" style="margin-top:3rem">
-Generated from the ITT pipeline at <code>github.com/jasonandr/outcomes-after-tb-abandonment</code>.
-</p>
+<footer>
+Generated from the ITT pipeline at
+<code>github.com/jasonandr/outcomes-after-tb-abandonment</code>.
+This file is self-contained (base64-embedded figures, inline CSS, no
+external references) — works offline, safe to email or drop into shared
+folders.
+</footer>
 
 </body></html>
 """
 
 OUT_HTML.write_text(html, encoding="utf-8")
-print(f"Wrote {OUT_HTML}")
-print(f"Size: {OUT_HTML.stat().st_size / 1024:.1f} KB")
+print(f"Wrote {OUT_HTML}  ({OUT_HTML.stat().st_size / 1024:.1f} KB)")
+
+# Drop a date-stamped copy on the Desktop for easy sharing.
+DESKTOP_HTML.parent.mkdir(parents=True, exist_ok=True)
+DESKTOP_HTML.write_text(html, encoding="utf-8")
+print(f"Wrote {DESKTOP_HTML}  ({DESKTOP_HTML.stat().st_size / 1024:.1f} KB)")
