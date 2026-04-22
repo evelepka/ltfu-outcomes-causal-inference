@@ -138,29 +138,39 @@ pA <- ggplot(hr_tbl, aes(x = month_mid, y = HR)) +
         plot.subtitle = element_text(size = 9))
 
 # ---------------------------------------------------------------------------
-# Panel B: Target-trial HR by month of abandonment (MI-pooled)
+# Panel B: Target-trial HR by month of abandonment — Early vs Late (MI-pooled)
 # ---------------------------------------------------------------------------
-cat("[fig3] Panel B: target trial HR array ...\n")
-tt_csv <- file.path(ITT_RESULTS_DIR, "target_trial_mi_6mo_array_hr.csv")
-if (!file.exists(tt_csv)) stop(sprintf("Missing %s (run 30b_itt_target_trial_mi_generator.R)", tt_csv))
-dfB <- read.csv(tt_csv, stringsAsFactors = FALSE)
-dfB$Month <- as.numeric(gsub("Month_", "", dfB$Trial_Month))
-dfB$sig <- ifelse(dfB$CI_Lower > 1 | dfB$CI_Upper < 1, "significant", "not sig.")
+cat("[fig3] Panel B: early-vs-late HR array ...\n")
+tt_csv <- file.path(ITT_RESULTS_DIR, "target_trial_mi_early_late_array.csv")
+if (!file.exists(tt_csv)) stop(sprintf("Missing %s (run 30c_itt_target_trial_early_late.R)", tt_csv))
+dfB_raw <- read.csv(tt_csv, stringsAsFactors = FALSE)
+# Keep the Early (cap=0.5) and Late (cap=5) rows
+dfB <- dfB_raw |>
+  dplyr::filter((model == "early" & cap == 0.5) | (model == "late" & cap == 5)) |>
+  dplyr::mutate(
+    Month = as.numeric(gsub("Month_", "", Trial_Month)),
+    Window = dplyr::recode(model,
+                           "early" = "Early (0–6 months)",
+                           "late"  = "Late (6–60 months)")
+  )
+dfB$Window <- factor(dfB$Window, levels = c("Early (0–6 months)", "Late (6–60 months)"))
 
-pB <- ggplot(dfB, aes(x = Month, y = HR)) +
+palette_EL <- c("Early (0–6 months)" = "#3498db",
+                "Late (6–60 months)" = "#e74c3c")
+
+pB <- ggplot(dfB, aes(x = Month, y = HR, color = Window, group = Window)) +
   geom_hline(yintercept = 1, linetype = "dashed", linewidth = 0.5) +
-  geom_errorbar(aes(ymin = CI_Lower, ymax = CI_Upper),
-                width = 0.12, linewidth = 0.7, color = "#34495e") +
-  geom_line(color = "#34495e", linewidth = 0.7, alpha = 0.6) +
-  geom_point(aes(color = sig), size = 3.5) +
-  scale_color_manual(values = c("significant" = "#e74c3c",
-                                "not sig." = "#95a5a6")) +
-  scale_y_continuous(breaks = seq(0.5, 2.5, 0.5)) +
+  geom_errorbar(aes(ymin = CI_L, ymax = CI_H),
+                width = 0.14, linewidth = 0.7) +
+  geom_line(linewidth = 0.9, alpha = 0.8) +
+  geom_point(size = 3.5) +
+  scale_color_manual(values = palette_EL) +
+  scale_y_log10(breaks = c(0.25, 0.5, 1, 2, 4)) +
   scale_x_continuous(breaks = 1:6, labels = paste("Mo", 1:6)) +
-  labs(title = "B. Mortality HR by month of abandonment",
-       subtitle = "Sequential target-trial emulation, 2-year horizon, MI-pooled (m=5)",
+  labs(title = "B. Mortality HR by month of LTFU",
+       subtitle = "Sequential target-trial emulation; MI-pooled; Early = deaths in first 6 months from treatment start; Late = deaths 6-60 months",
        x = "Month of loss to follow-up",
-       y = "Hazard ratio (abandon vs. stay)",
+       y = "Hazard ratio (log scale)",
        color = NULL) +
   theme_classic(base_size = 11) +
   theme(legend.position = "bottom",
@@ -168,12 +178,13 @@ pB <- ggplot(dfB, aes(x = Month, y = HR)) +
         plot.subtitle = element_text(size = 9))
 
 # ---------------------------------------------------------------------------
-# Panel C: Subgroup forest (MI-pooled, from 32b)
+# Panel C: Subgroup forest — LATE mortality (MI-pooled, from 32b, 5-yr cap)
 # ---------------------------------------------------------------------------
-cat("[fig3] Panel C: subgroup forest ...\n")
+cat("[fig3] Panel C: subgroup forest (late, 5y cap) ...\n")
 sub_csv <- file.path(ITT_RESULTS_DIR, "target_trial_subgroup_interactions_mi.csv")
 if (!file.exists(sub_csv)) stop(sprintf("Missing %s (run 32b_itt_target_trial_subgroups_mi.R)", sub_csv))
-dfC <- read.csv(sub_csv, stringsAsFactors = FALSE)
+dfC_all <- read.csv(sub_csv, stringsAsFactors = FALSE)
+dfC <- dfC_all |> dplyr::filter(model == "late", cap == 5)
 
 # Pretty labels
 dfC <- dfC |>
@@ -207,8 +218,8 @@ pC <- ggplot(dfC, aes(x = HR, y = rowlabel, color = Subgroup_clean)) +
   scale_x_log10(breaks = c(0.5, 0.75, 1, 1.5, 2, 3, 4),
                 limits = c(0.4, 8)) +
   scale_color_brewer(palette = "Dark2") +
-  labs(title = "C. Mortality HR by subgroup (target trial)",
-       subtitle = "Sequential target-trial emulation stratified by baseline subgroup; MI-pooled",
+  labs(title = "C. Late-mortality HR by subgroup",
+       subtitle = "Sequential target-trial emulation; late mortality = deaths 6-60 months from treatment start; MI-pooled",
        x = "Hazard ratio (log scale)", y = NULL, color = NULL) +
   theme_classic(base_size = 11) +
   theme(legend.position = "bottom",

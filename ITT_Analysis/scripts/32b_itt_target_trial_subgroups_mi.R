@@ -1,9 +1,14 @@
-# 32b. Sequential Target Trial Subgroup HRs — Multiply-Imputed
+# 32b. Target-trial subgroup HRs, MI-pooled, with Early/Late split
 # ==============================================================================
-# MI-pooled version of 32_itt_target_trial_subgroups.R. Reads the five imputed
-# datasets produced by 03a_itt_mi_miceforest.py (ITT_Analysis/data/mi/imp_*.csv)
-# and, for each subgroup level, fits the 6-month sequential target trial Cox
-# model on each imputation, then pools expose HRs via Rubin's rules.
+# For each subgroup level (age, sex, HIV, homelessness), fit a pooled
+# sequential-target-trial Cox across 5 miceforest-imputed datasets and extract
+# the expose-HR. Outputs three variants per level:
+#   - overall  (cap 2yr and 5yr)
+#   - early    (events in (0, 0.5]yr from trial start; cap 0.5)
+#   - late     (events in (0.5, cap]yr; no landmark — early deaths censored at
+#               their actual death time, event=0)
+# Anchor: time_d_tx (years from best_start / treatment initiation).
+# Input:  miceforest imputed datasets at ITT_Analysis/data/mi/imp_*.csv
 # Output: ITT_Analysis/results/target_trial_subgroup_interactions_mi.csv
 # ==============================================================================
 
@@ -14,7 +19,6 @@ suppressPackageStartupMessages({
   library(broom)
 })
 
-# -- Paths -------------------------------------------------------------------
 .here <- function() {
   args <- commandArgs(trailingOnly = FALSE)
   file_arg <- grep("^--file=", args, value = TRUE)
@@ -28,21 +32,16 @@ suppressPackageStartupMessages({
 }
 source(file.path(.here(), "_paths.R"))
 
-# -- Load imputed datasets ---------------------------------------------------
 imp_files <- sort(list.files(ITT_MI_DIR, pattern = "^imp_\\d+\\.csv$", full.names = TRUE))
-if (length(imp_files) == 0) {
-  stop(sprintf("No imputed datasets in %s — run 03a_itt_mi_miceforest.py first.",
-               ITT_MI_DIR))
-}
+stopifnot(length(imp_files) > 0)
 M <- length(imp_files)
-cat(sprintf("[32b] Found %d imputed datasets\n", M))
+cat(sprintf("[32b] %d imputed datasets\n", M))
 
 prepare_imp <- function(path) {
   d <- read.csv(path, stringsAsFactors = FALSE)
   d$date_start <- as.Date(d$best_start)
   d$date_end   <- as.Date(d$end_date)
   d$tx_duration_yrs <- as.numeric(d$date_end - d$date_start) / 365.25
-
   d$age_group <- factor(d$age_group, levels = c("15-24", "25-44", "45-64", "≥65"))
   for (v in c("sex", "race_clean", "edu_clean", "hiv_aids", "diabetes",
               "alcohol", "drug_use", "incarcerated", "homelessness",
@@ -51,23 +50,21 @@ prepare_imp <- function(path) {
   }
   d
 }
-
 imp_list <- lapply(imp_files, prepare_imp)
-cat(sprintf("[32b] Each imputed cohort: %d rows\n", nrow(imp_list[[1]])))
 
-COVARIATES <- c("age_group", "sex", "race_clean", "edu_clean", "hiv_aids",
-                "diabetes", "alcohol", "drug_use", "incarcerated",
-                "homelessness", "hosp_admission", "clinical_clean",
-                "dot_status", "trial_month")
+COVARS <- c("age_group", "sex", "race_clean", "edu_clean", "hiv_aids",
+            "diabetes", "alcohol", "drug_use", "incarcerated",
+            "homelessness", "hosp_admission", "clinical_clean",
+            "dot_status", "trial_month")
 
-# -- Build the 6-month pooled target-trial array for one imputed df ----------
+# Build the 6-month pooled array for one imputed df
 build_pooled <- function(d) {
   trial_list <- vector("list", 6)
   for (m in 1:6) {
     start_yrs <- (m - 1) * 30 / 365.25
     end_yrs   <-  m      * 30 / 365.25
     tr <- d |>
-      dplyr::filter(time_d > start_yrs) |>
+      dplyr::filter(time_d_tx > start_yrs) |>
       dplyr::mutate(eligible = ifelse(itt_group == "Non-LTFU" | tx_duration_yrs >= start_yrs, 1, 0)) |>
       dplyr::filter(eligible == 1) |>
       dplyr::mutate(
@@ -75,11 +72,8 @@ build_pooled <- function(d) {
                           tx_duration_yrs >= start_yrs &
                           tx_duration_yrs <  end_yrs, 1, 0),
         trial_month = paste0("Month_", m),
-        time_followup = time_d - start_yrs,
         event_d_num = as.numeric(as.character(event_d)),
-        # 2-year horizon
-        event_d_num = ifelse(time_followup > 2.0, 0, event_d_num),
-        time_followup = ifelse(time_followup > 2.0, 2.0, time_followup)
+        time_raw = time_d_tx - start_yrs
       )
     trial_list[[m]] <- tr
   }
@@ -88,63 +82,72 @@ build_pooled <- function(d) {
   pooled
 }
 
-# -- Subgroup-stratified MI pooling ------------------------------------------
-SUBGROUPS <- c("age_group", "sex", "hiv_aids", "homelessness")
-all_results <- list()
+pooled_list <- lapply(imp_list, build_pooled)
 
+# Outcome configurator — applies time + event caps per model/cap
+apply_outcome <- function(tr, model, cap) {
+  t <- tr$time_raw
+  e <- tr$event_d_num
+  if (model == "overall") {
+    tr$time_out  <- pmin(t, cap)
+    tr$event_out <- ifelse(t > cap, 0, e)
+  } else if (model == "early") {
+    tr$time_out  <- pmin(t, 0.5)
+    tr$event_out <- ifelse(t <= 0.5 & e == 1, 1, 0)
+  } else if (model == "late") {
+    tr$time_out  <- pmin(t, cap)
+    tr$event_out <- ifelse(t > 0.5 & t <= cap & e == 1, 1, 0)
+  }
+  tr[tr$time_out > 0, , drop = FALSE]
+}
+
+SUBGROUPS <- c("age_group", "sex", "hiv_aids", "homelessness")
+CONFIGS <- list(
+  list(model = "overall", cap = 2),
+  list(model = "overall", cap = 5),
+  list(model = "early",   cap = 0.5),
+  list(model = "late",    cap = 2),
+  list(model = "late",    cap = 5)
+)
+
+all_rows <- list()
 for (sg in SUBGROUPS) {
   cat(sprintf("\n[32b] Subgroup: %s\n", sg))
-  base_covs <- setdiff(COVARIATES, sg)
-
-  # Determine the levels present (use the first imputation)
-  lvls <- sort(unique(as.character(imp_list[[1]][[sg]])))
+  base_covs <- setdiff(COVARS, sg)
+  lvls <- sort(unique(as.character(pooled_list[[1]][[sg]])))
   lvls <- lvls[!is.na(lvls) & lvls != ""]
-
   for (lvl in lvls) {
-    cat(sprintf("  level: %s\n", lvl))
-    fits <- vector("list", M)
-    for (i in seq_len(M)) {
-      pooled_i <- build_pooled(imp_list[[i]])
-      sub_i <- pooled_i[pooled_i[[sg]] == lvl & !is.na(pooled_i[[sg]]), ]
-      if (nrow(sub_i) < 100 || sum(sub_i$event_d_num, na.rm = TRUE) < 5) {
-        fits[[i]] <- NULL
-        next
-      }
-      rhs <- paste("expose +", paste(base_covs, collapse = " + "))
-      f <- as.formula(paste("Surv(time_followup, event_d_num) ~", rhs))
-      fit <- tryCatch(
-        coxph(f, data = sub_i, cluster = sinan_clean),
-        error = function(e) NULL
+    for (cfg in CONFIGS) {
+      fits <- lapply(pooled_list, function(pooled_i) {
+        sub_i <- pooled_i[!is.na(pooled_i[[sg]]) & pooled_i[[sg]] == lvl, ]
+        sub_i <- apply_outcome(sub_i, cfg$model, cfg$cap)
+        if (nrow(sub_i) < 100 || sum(sub_i$event_out) < 5) return(NULL)
+        rhs <- paste("expose +", paste(base_covs, collapse = " + "))
+        f <- as.formula(paste("Surv(time_out, event_out) ~", rhs))
+        tryCatch(coxph(f, data = sub_i, cluster = sinan_clean),
+                 error = function(e) NULL)
+      })
+      fits <- Filter(Negate(is.null), fits)
+      if (length(fits) == 0) next
+      pooled_fit <- tryCatch(
+        summary(pool(as.mira(fits)), exponentiate = TRUE, conf.int = TRUE),
+        error = function(e) NULL)
+      if (is.null(pooled_fit)) next
+      ex <- pooled_fit[pooled_fit$term == "expose", ]
+      if (nrow(ex) == 0) next
+      all_rows[[length(all_rows) + 1]] <- data.frame(
+        Subgroup = sg, Level = lvl,
+        model = cfg$model, cap = cfg$cap,
+        HR = ex$estimate, CI_L = ex$conf.low, CI_H = ex$conf.high,
+        P_Value = ex$p.value, N_imp = length(fits)
       )
-      fits[[i]] <- fit
+      cat(sprintf("  %-13s %-14s %-7s cap=%.1f  HR=%.2f (%.2f-%.2f)\n",
+                  sg, lvl, cfg$model, cfg$cap, ex$estimate, ex$conf.low, ex$conf.high))
     }
-    fits <- Filter(Negate(is.null), fits)
-    if (length(fits) == 0) {
-      cat("    (no fittable model in any imputation)\n")
-      next
-    }
-    pooled_fit <- tryCatch(
-      summary(pool(as.mira(fits)), exponentiate = TRUE, conf.int = TRUE),
-      error = function(e) { cat("    pool error: ", conditionMessage(e), "\n"); NULL }
-    )
-    if (is.null(pooled_fit)) next
-    expose_row <- pooled_fit[pooled_fit$term == "expose", ]
-    if (nrow(expose_row) == 0) next
-
-    all_results[[length(all_results) + 1]] <- data.frame(
-      Subgroup = sg,
-      Level    = lvl,
-      HR       = expose_row$estimate,
-      CI_L     = expose_row$conf.low,
-      CI_H     = expose_row$conf.high,
-      P_Value  = expose_row$p.value,
-      N_Imp    = length(fits)
-    )
   }
 }
 
-final_df <- bind_rows(all_results)
+final_df <- bind_rows(all_rows)
 out_path <- file.path(ITT_RESULTS_DIR, "target_trial_subgroup_interactions_mi.csv")
 write.csv(final_df, out_path, row.names = FALSE)
 cat(sprintf("\n[32b] Wrote %d rows to %s\n", nrow(final_df), out_path))
-print(final_df)
