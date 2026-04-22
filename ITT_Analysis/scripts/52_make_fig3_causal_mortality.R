@@ -39,9 +39,16 @@ OUT_PNG <- file.path(ITT_RESULTS_DIR, "Figure_3_causal_mortality.png")
 OUT_PDF <- file.path(ITT_RESULTS_DIR, "Figure_3_causal_mortality.pdf")
 
 # ---------------------------------------------------------------------------
-# Panel A: Crude time-varying mortality (counting-process Nelson-Aalen)
+# Panel A: Time-varying hazard RATIO HR(t) via piecewise Cox
 # ---------------------------------------------------------------------------
-cat("[fig3] Panel A: crude time-varying cumulative hazard ...\n")
+# Counting-process format: everyone enters as "not abandoned" at t=0; LTFU
+# individuals transition to "abandoned" at their tx_duration. We then split
+# follow-up at monthly boundaries and fit Cox with expose × month
+# interaction, extracting HR per interval. The pattern should show HR < 1
+# very early (immortal-time artefact — abandoners haven't crossed over yet
+# at short times) then HR > 1 as abandoners accumulate risk.
+# ---------------------------------------------------------------------------
+cat("[fig3] Panel A: HR(t) piecewise Cox ...\n")
 df <- read.csv(COHORT_CSV, stringsAsFactors = FALSE)
 df$patient_id <- seq_len(nrow(df))
 df$tx_dur <- as.numeric(difftime(as.Date(df$end_date),
@@ -51,7 +58,7 @@ HORIZON <- 2.0
 df$event_d  <- ifelse(df$time_d_tx > HORIZON, 0, df$event_d)
 df$time_d_tx <- ifelse(df$time_d_tx > HORIZON, HORIZON, df$time_d_tx)
 
-# Everyone enters "Maintained Care" at time 0, stays until abandonment or end
+# Everyone enters "not abandoned" at t=0; stays until abandonment or end.
 df_p1 <- df
 df_p1$tstart <- 0
 df_p1$tstop  <- ifelse(df_p1$itt_group == "Loss to follow-up" &
@@ -60,50 +67,74 @@ df_p1$tstop  <- ifelse(df_p1$itt_group == "Loss to follow-up" &
 df_p1$event <- ifelse(df_p1$itt_group == "Loss to follow-up" &
                         df_p1$tx_dur < df_p1$time_d_tx,
                       0, df_p1$event_d)
-df_p1$group <- "Maintained care"
+df_p1$expose <- 0
 
-# LTFU individuals spawn a second row starting at abandonment
+# LTFU individuals spawn a second row starting at abandonment (expose=1)
 df_p2 <- df[df$itt_group == "Loss to follow-up" & df$tx_dur < df$time_d_tx, ]
 df_p2$tstart <- df_p2$tx_dur
 df_p2$tstop  <- df_p2$time_d_tx
 df_p2$event  <- df_p2$event_d
-df_p2$group  <- "Abandoned treatment"
+df_p2$expose <- 1
 
 df_split <- bind_rows(df_p1, df_p2) |>
   dplyr::filter(round(tstop - tstart, 4) > 0)
 
-fit <- survfit(Surv(tstart, tstop, event) ~ group,
-               data = df_split, id = patient_id)
+# Further split each interval at monthly boundaries (24 buckets over 2 yrs).
+BREAKS <- seq(0, HORIZON, by = 1/12)
+df_piecewise <- survSplit(Surv(tstart, tstop, event) ~ .,
+                          data = df_split, cut = BREAKS[-c(1, length(BREAKS))],
+                          episode = "month_bin")
+# month_bin = 1 corresponds to (0, 1/12]; label by midpoint in months
+df_piecewise$month_bin <- factor(df_piecewise$month_bin,
+                                 levels = seq_len(length(BREAKS) - 1))
 
-df_plot_A <- data.frame(
-  Time = fit$time,
-  CumHaz = fit$cumhaz,
-  strata = rep(names(fit$strata), fit$strata)
-)
-df_plot_A$strata <- gsub("group=", "", df_plot_A$strata)
-df_plot_A <- bind_rows(
-  data.frame(Time = 0, CumHaz = 0, strata = c("Maintained care", "Abandoned treatment")),
-  df_plot_A
-)
+fit_pw <- coxph(Surv(tstart, tstop, event) ~ expose:strata(month_bin),
+                data = df_piecewise, id = patient_id, control = coxph.control(timefix = FALSE))
 
-palette_A <- c("Maintained care" = "#2c3e50", "Abandoned treatment" = "#e74c3c")
-pA <- ggplot(df_plot_A, aes(x = Time, y = CumHaz,
-                            color = strata, linetype = strata)) +
-  geom_step(linewidth = 1.15) +
-  scale_color_manual(values = palette_A) +
-  scale_y_continuous(labels = percent_format(accuracy = 1),
-                     limits = c(0, 0.14),
-                     breaks = seq(0, 0.14, 0.02)) +
-  scale_x_continuous(breaks = seq(0, HORIZON, 0.5)) +
-  labs(title = "A. Crude time-varying mortality",
-       subtitle = "Cumulative hazard; everyone starts in 'Maintained care' and moves to 'Abandoned treatment' on the day they drop out.\nAbandoners' curve only starts after abandonment — classic immortal-time-bias pattern.",
-       x = "Years since treatment start",
-       y = "Cumulative hazard of mortality",
-       color = NULL, linetype = NULL) +
+# Fit per bucket separately so we get clean per-bucket HR + CI
+bucket_hr <- function(d, bin) {
+  sub <- d[d$month_bin == bin, ]
+  if (sum(sub$event) < 3 || length(unique(sub$expose)) < 2) return(NULL)
+  f <- tryCatch(coxph(Surv(tstart, tstop, event) ~ expose,
+                      data = sub, id = patient_id),
+                error = function(e) NULL)
+  if (is.null(f)) return(NULL)
+  s <- summary(f)
+  data.frame(
+    month_mid = (as.numeric(as.character(bin)) - 0.5) / 12,
+    HR = s$coefficients[1, "exp(coef)"],
+    CI_L = s$conf.int[1, "lower .95"],
+    CI_H = s$conf.int[1, "upper .95"],
+    n_events = sum(sub$event)
+  )
+}
+
+bins <- levels(df_piecewise$month_bin)
+hr_tbl <- do.call(rbind, lapply(bins, function(b) bucket_hr(df_piecewise, b)))
+hr_tbl <- hr_tbl[is.finite(hr_tbl$HR) & is.finite(hr_tbl$CI_H) & hr_tbl$CI_H < 50, ]
+cat(sprintf("[fig3] Piecewise HR(t) estimated at %d time buckets\n", nrow(hr_tbl)))
+
+write.csv(hr_tbl,
+          file.path(ITT_RESULTS_DIR, "Figure_3a_HR_over_time.csv"),
+          row.names = FALSE)
+
+pA <- ggplot(hr_tbl, aes(x = month_mid, y = HR)) +
+  geom_hline(yintercept = 1, linetype = "dashed", linewidth = 0.5) +
+  geom_ribbon(aes(ymin = CI_L, ymax = CI_H),
+              alpha = 0.18, fill = "#e74c3c") +
+  geom_line(color = "#c0392b", linewidth = 1.0) +
+  geom_point(color = "#c0392b", size = 1.8) +
+  scale_y_log10(breaks = c(0.25, 0.5, 1, 2, 4, 8),
+                limits = c(0.15, 10)) +
+  scale_x_continuous(breaks = seq(0, HORIZON, 0.25),
+                     labels = function(x) paste0(round(x*12), "mo"),
+                     limits = c(0, HORIZON)) +
+  labs(title = "A. Time-varying hazard ratio (crude, counting-process)",
+       subtitle = "Piecewise monthly HR for abandoners vs. those still on treatment at that instant; 2-year horizon.\nEarly months: apparent HR < 1 (immortal-time artefact). Later months: HR grows, reflecting accumulated abandonment mortality.",
+       x = "Time since treatment start",
+       y = "HR (log scale)") +
   theme_classic(base_size = 11) +
-  theme(legend.position = c(0.28, 0.88),
-        legend.key.width = unit(1.4, "cm"),
-        plot.title = element_text(face = "bold", size = 13),
+  theme(plot.title = element_text(face = "bold", size = 13),
         plot.subtitle = element_text(size = 9))
 
 # ---------------------------------------------------------------------------

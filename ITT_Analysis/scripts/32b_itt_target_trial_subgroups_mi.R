@@ -67,7 +67,7 @@ build_pooled <- function(d) {
     start_yrs <- (m - 1) * 30 / 365.25
     end_yrs   <-  m      * 30 / 365.25
     tr <- d |>
-      dplyr::filter(time_d_tx > start_yrs) |>
+      dplyr::filter(time_d > start_yrs) |>
       dplyr::mutate(eligible = ifelse(itt_group == "Non-LTFU" | tx_duration_yrs >= start_yrs, 1, 0)) |>
       dplyr::filter(eligible == 1) |>
       dplyr::mutate(
@@ -75,7 +75,7 @@ build_pooled <- function(d) {
                           tx_duration_yrs >= start_yrs &
                           tx_duration_yrs <  end_yrs, 1, 0),
         trial_month = paste0("Month_", m),
-        time_followup = time_d_tx - start_yrs,
+        time_followup = time_d - start_yrs,
         event_d_num = as.numeric(as.character(event_d)),
         # 2-year horizon
         event_d_num = ifelse(time_followup > 2.0, 0, event_d_num),
