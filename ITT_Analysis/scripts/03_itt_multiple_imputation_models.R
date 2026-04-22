@@ -1,232 +1,222 @@
-library(mice)
-library(dplyr)
-library(survival)
-library(cmprsk)
-library(broom)
+# 03_itt_multiple_imputation_models.R
+# -----------------------------------
+# Fits Cox (mortality) and Fine-Gray (retreatment with death as competing risk)
+# models on the LTFU subgroup, pooled across m=5 multiply-imputed datasets,
+# plus complete-case sensitivity analyses.
+#
+# Imputation is NOT done here. Run 03a_itt_mi_miceforest.py first to produce
+# ITT_Analysis/data/mi/imp_01.csv ... imp_05.csv (miceforest; ~10-30x faster
+# than the previous R mice-based pipeline). This script reads those files,
+# fits models per imputation, and pools via Rubin's rules through mice::pool().
 
-# --- Configuration ---
-base_path <- "/Users/evelynlepkadelima/Library/CloudStorage/GoogleDrive-evelynlepka@gmail.com/My Drive/Abandonment Outcomes/Abandonment Paper"
-setwd(base_path)
+suppressPackageStartupMessages({
+  library(mice)
+  library(dplyr)
+  library(survival)
+  library(broom)
+})
 
-# Load the newly generated ITT cohort
-df_base <- read.csv("ITT_Analysis/data/itt_cohort.csv", stringsAsFactors = FALSE)
-
-# 1. Clean Variables for MI 
-na_vals <- c("Missing", "Ignorado", "Unknown", "", "nan")
-df <- df_base %>%
-  filter(itt_group == "Loss to follow-up") %>% # Restrict to Loss to follow-up ONLY
-  mutate(across(c(race_clean, edu_clean, dot_status, alcohol, drug_use, diabetes, hosp_admission, hiv_aids), ~ ifelse(. %in% na_vals, NA, .))) %>%
-  mutate(
-    # Ensure times are numeric and non-zero
-    time_rn = as.numeric(ifelse(time_rn <= 0, 0.001, time_rn)),
-    time_d = as.numeric(ifelse(time_d <= 0, 0.001, time_d)),
-
-    # Combined status for Fine-Gray (Retreatment=1, Death=2, Censored=0)
-    fg_status = case_when(
-      event_rn == 1 ~ 1,
-      event_d == 1 & event_rn == 0 ~ 2,
-      TRUE ~ 0
-    ),
-    fg_time = as.numeric(ifelse(event_rn == 1, time_rn, time_d)),
-    
-    # Treatment month grouping is already in the CSV
-    tx_month_grp = factor(tx_month_grp, levels = c("≥ 4 months", "< 2 months", "2 to <4 months")),
-    
-    # Clean age_group
-    age_group = cut(age_tb, breaks=c(14, 24, 44, 64, 150), labels=c("15-24", "25-44", "45-64", "≥65")),
-    
-    # Use pre-cleaned factors explicitly
-    sex = as.factor(sex),
-    race_clean = as.factor(race_clean),
-    edu_clean = as.factor(edu_clean),
-    clinical_clean = as.factor(clinical_clean),
-    
-    hiv_aids = as.factor(hiv_aids),
-    diabetes = as.factor(diabetes),
-    alcohol = as.factor(alcohol),
-    drug_use = as.factor(drug_use),
-    incarcerated = as.factor(incarcerated),
-    homelessness = as.factor(homelessness),
-    hosp_admission = as.factor(hosp_admission),
-    dot_status = as.factor(dot_status),
-    
-    # Ensure event types are factors for MI 
-    fg_status = as.factor(fg_status),
-    event_d = as.factor(event_d)
-  )
-
-# Set Reference Levels
-df$age_group <- relevel(df$age_group, ref = "15-24")
-df$race_clean <- relevel(df$race_clean, ref = "White")
-df$edu_clean <- relevel(df$edu_clean, ref = "≥ 12 years")
-df$clinical_clean <- relevel(df$clinical_clean, ref = "Pulmonary")
-df$tx_month_grp <- relevel(df$tx_month_grp, ref = "≥ 4 months")
-
-# 2. Setup MI Dataset
-vars_mi <- c(
-  "age_group", "sex", "race_clean", "edu_clean", 
-  "hiv_aids", "diabetes", "alcohol", "drug_use", 
-  "incarcerated", "homelessness", "hosp_admission", 
-  "clinical_clean", "dot_status", "tx_month_grp",
-  "fg_status", "fg_time", "event_d", "time_d"
-)
-
-df_mi <- df[, vars_mi]
-
-# 3. Run Imputation
-set.seed(42)
-cat("Starting Imputation (m=5, maxit=5) for N =", nrow(df_mi), "...\n")
-imp <- mice(df_mi, m = 5, maxit = 5, method = "pmm", printFlag = TRUE)
-cat("Imputation finished. Fitting models...\n")
-
-# 4. Multivariable Modeling 
-cat("Fitting models...\n")
-
-# Predictor list
-all_vars <- c("age_group", "sex", "race_clean", "edu_clean", 
-              "hiv_aids", "diabetes", "alcohol", "drug_use", 
-              "incarcerated", "homelessness", "hosp_admission", 
-              "clinical_clean", "dot_status", "tx_month_grp")
-
-# --- Mortality (Cox) ---
-# Adjusted
-fit_cox_mv <- with(imp, coxph(Surv(time_d, as.numeric(as.character(event_d))) ~ age_group + sex + race_clean +
-  edu_clean + hiv_aids + diabetes + alcohol + drug_use +
-  incarcerated + homelessness + hosp_admission + clinical_clean + dot_status + tx_month_grp))
-pool_cox_mv <- summary(pool(fit_cox_mv), exponentiate = TRUE, conf.int = TRUE)
-
-# --- Retreatment (Fine-Gray) ---
-fg_fits_mv <- list()
-for (i in 1:5) {
-  df_i <- complete(imp, i)
-  fg_data <- finegray(Surv(fg_time, fg_status) ~ ., data = df_i, etype = "1")
-  
-  fit_fg_mv <- coxph(
-    Surv(fgstart, fgstop, fgstatus) ~ age_group + sex + race_clean +
-      edu_clean + hiv_aids + diabetes + alcohol + drug_use +
-      incarcerated + homelessness + hosp_admission + clinical_clean + dot_status + tx_month_grp,
-    data = fg_data, weights = fgwt
-  )
-  fg_fits_mv[[i]] <- fit_fg_mv
+# -- Paths -------------------------------------------------------------------
+# Locate this script's directory robustly (works under Rscript, source(), and
+# interactive eval).
+.here <- function() {
+  args <- commandArgs(trailingOnly = FALSE)
+  file_arg <- grep("^--file=", args, value = TRUE)
+  if (length(file_arg)) return(dirname(normalizePath(sub("^--file=", "", file_arg[1]))))
+  frames <- sys.frames()
+  for (f in rev(frames)) {
+    of <- f$ofile
+    if (!is.null(of)) return(dirname(normalizePath(of)))
+  }
+  getwd()
 }
-pool_fg_mv <- summary(pool(as.mira(fg_fits_mv)), exponentiate = TRUE, conf.int = TRUE)
+source(file.path(.here(), "_paths.R"))
 
+if (!dir.exists(ITT_MI_DIR)) {
+  stop(sprintf(
+    "No imputed datasets found at %s. Run 03a_itt_mi_miceforest.py first.",
+    ITT_MI_DIR
+  ))
+}
+imp_files <- sort(list.files(ITT_MI_DIR, pattern = "^imp_\\d+\\.csv$", full.names = TRUE))
+if (length(imp_files) == 0) {
+  stop(sprintf("No imp_*.csv files in %s", ITT_MI_DIR))
+}
+M <- length(imp_files)
+cat(sprintf("[mi] Found %d imputed datasets in %s\n", M, ITT_MI_DIR))
 
+# -- Load each imputed dataset and harmonize types --------------------------
+# Reference levels match the previous R script.
+prepare_imp <- function(path) {
+  d <- read.csv(path, stringsAsFactors = FALSE)
 
-# --- Univariate Modeling (for ALL variables) ---
-cat("Running univariate models for all vars...\n")
-uv_results <- data.frame()
+  # Times: ensure numeric and non-zero
+  d$time_rn <- as.numeric(ifelse(d$time_rn <= 0, 0.001, d$time_rn))
+  d$time_d  <- as.numeric(ifelse(d$time_d  <= 0, 0.001, d$time_d))
+  d$fg_time <- as.numeric(d$fg_time)
 
+  d$tx_month_grp <- factor(d$tx_month_grp,
+                           levels = c("≥ 4 months", "< 2 months", "2 to <4 months"))
+  d$tx_month_grp <- relevel(d$tx_month_grp, ref = "≥ 4 months")
+
+  d$age_group    <- factor(d$age_group, levels = c("15-24", "25-44", "45-64", "≥65"))
+  d$age_group    <- relevel(d$age_group, ref = "15-24")
+  d$race_clean   <- relevel(factor(d$race_clean),   ref = "White")
+  d$edu_clean    <- relevel(factor(d$edu_clean),    ref = "≥ 12 years")
+  d$clinical_clean <- relevel(factor(d$clinical_clean), ref = "Pulmonary")
+
+  for (v in c("sex", "hiv_aids", "diabetes", "alcohol", "drug_use",
+              "incarcerated", "homelessness", "hosp_admission", "dot_status",
+              "fg_status", "event_d")) {
+    d[[v]] <- as.factor(d[[v]])
+  }
+  d
+}
+
+imp_list_full <- lapply(imp_files, prepare_imp)
+cat(sprintf("[mi] Full cohort N = %d (each imputation)\n", nrow(imp_list_full[[1]])))
+
+# This analysis is the within-LTFU risk-factor model. Filter each imputed
+# dataset to LTFU for modeling.
+imp_list <- lapply(imp_list_full, function(d) {
+  d[d$itt_group == "Loss to follow-up", , drop = FALSE]
+})
+N_LTFU <- nrow(imp_list[[1]])
+cat(sprintf("[mi] LTFU subgroup N = %d (each imputation)\n", N_LTFU))
+
+# -- Covariate lists --------------------------------------------------------
+all_vars <- c(
+  "age_group", "sex", "race_clean", "edu_clean",
+  "hiv_aids",  "diabetes", "alcohol",   "drug_use",
+  "incarcerated", "homelessness", "hosp_admission",
+  "clinical_clean", "dot_status", "tx_month_grp"
+)
+mv_formula_rhs <- paste(all_vars, collapse = " + ")
+
+# -- Helper: fit a list of models across imputations, then pool -------------
+fit_and_pool <- function(fit_fn) {
+  fits <- lapply(imp_list, fit_fn)
+  pooled <- summary(pool(as.mira(fits)), exponentiate = TRUE, conf.int = TRUE)
+  as.data.frame(pooled)
+}
+
+# -- 1. Adjusted Cox (mortality) --------------------------------------------
+cat("\n[fit] Adjusted Cox (mortality)...\n")
+pool_cox_mv <- fit_and_pool(function(d) {
+  coxph(as.formula(paste("Surv(time_d, as.numeric(as.character(event_d))) ~", mv_formula_rhs)),
+        data = d)
+})
+
+# -- 2. Adjusted Fine-Gray (retreatment with death competing) ---------------
+cat("[fit] Adjusted Fine-Gray (retreatment)...\n")
+pool_fg_mv <- fit_and_pool(function(d) {
+  fg_data <- finegray(Surv(fg_time, fg_status) ~ ., data = d, etype = "1")
+  coxph(as.formula(paste("Surv(fgstart, fgstop, fgstatus) ~", mv_formula_rhs)),
+        data = fg_data, weights = fgwt)
+})
+
+# -- 3. Univariate Cox + Fine-Gray for each variable ------------------------
+cat("[fit] Univariate Cox + Fine-Gray for 14 covariates...\n")
+uv_results <- list()
 for (v in all_vars) {
-  # Mortality Univariate
-  cox_uv_fits <- list()
-  for (i in 1:5) {
-    df_i <- complete(imp, i)
-    form_cox <- as.formula(paste("Surv(time_d, as.numeric(as.character(event_d))) ~", v))
-    cox_uv_fits[[i]] <- coxph(form_cox, data = df_i)
-  }
-  p_cox_uv <- summary(pool(as.mira(cox_uv_fits)), exponentiate = TRUE, conf.int = TRUE)
-  p_cox_uv$model <- "Cox_Death_Unadjusted"
-  
-  # Retreatment Univariate
-  fg_uv_fits <- list()
-  for (i in 1:5) {
-    df_i <- complete(imp, i)
-    fg_data_i <- finegray(Surv(fg_time, fg_status) ~ ., data = df_i, etype = "1")
-    form_fg <- as.formula(paste("Surv(fgstart, fgstop, fgstatus) ~", v))
-    fit_fg_uv <- coxph(form_fg, data = fg_data_i, weights = fgwt)
-    fg_uv_fits[[i]] <- fit_fg_uv
-  }
-  p_fg_uv <- summary(pool(as.mira(fg_uv_fits)), exponentiate = TRUE, conf.int = TRUE)
-  p_fg_uv$model <- "FG_Retr_Unadjusted"
-  
-  uv_results <- bind_rows(uv_results, p_cox_uv, p_fg_uv)
+  cox_uv <- fit_and_pool(function(d) {
+    coxph(as.formula(paste("Surv(time_d, as.numeric(as.character(event_d))) ~", v)), data = d)
+  })
+  cox_uv$model <- "Cox_Death_Unadjusted"
+
+  fg_uv <- fit_and_pool(function(d) {
+    fg_data <- finegray(Surv(fg_time, fg_status) ~ ., data = d, etype = "1")
+    coxph(as.formula(paste("Surv(fgstart, fgstop, fgstatus) ~", v)),
+          data = fg_data, weights = fgwt)
+  })
+  fg_uv$model <- "FG_Retr_Unadjusted"
+
+  uv_results[[v]] <- bind_rows(cox_uv, fg_uv)
+}
+uv_df <- bind_rows(uv_results)
+
+# -- 4. Complete-case sensitivity -------------------------------------------
+cat("[fit] Complete-case Cox + Fine-Gray...\n")
+# Drop rows with NA in any MV covariate from the first imputed dataset we can
+# just as well derive CC from any one of them since the non-missingness
+# pattern is preserved. Use the raw itt_cohort.csv to be rigorous.
+raw <- read.csv(COHORT_CSV, stringsAsFactors = FALSE) |>
+  dplyr::filter(itt_group == "Loss to follow-up")
+
+na_vals <- c("Missing", "Ignorado", "Unknown", "", "nan")
+for (v in c("race_clean", "edu_clean", "dot_status", "alcohol", "drug_use",
+            "diabetes", "hosp_admission", "hiv_aids")) {
+  raw[[v]] <- ifelse(raw[[v]] %in% na_vals, NA, raw[[v]])
+}
+raw$time_rn <- as.numeric(ifelse(raw$time_rn <= 0, 0.001, raw$time_rn))
+raw$time_d  <- as.numeric(ifelse(raw$time_d  <= 0, 0.001, raw$time_d))
+raw$fg_status <- with(raw, ifelse(event_rn == 1, 1,
+                           ifelse(event_d == 1 & event_rn == 0, 2, 0)))
+raw$fg_time   <- with(raw, ifelse(event_rn == 1, time_rn, time_d))
+
+raw$age_group <- cut(raw$age_tb, breaks = c(14, 24, 44, 64, 150),
+                     labels = c("15-24", "25-44", "45-64", "≥65"))
+raw$age_group <- relevel(factor(raw$age_group), ref = "15-24")
+raw$tx_month_grp <- factor(raw$tx_month_grp,
+                           levels = c("≥ 4 months", "< 2 months", "2 to <4 months"))
+raw$tx_month_grp <- relevel(raw$tx_month_grp, ref = "≥ 4 months")
+raw$race_clean   <- relevel(factor(raw$race_clean),   ref = "White")
+raw$edu_clean    <- relevel(factor(raw$edu_clean),    ref = "≥ 12 years")
+raw$clinical_clean <- relevel(factor(raw$clinical_clean), ref = "Pulmonary")
+for (v in c("sex", "hiv_aids", "diabetes", "alcohol", "drug_use",
+            "incarcerated", "homelessness", "hosp_admission", "dot_status",
+            "fg_status", "event_d")) {
+  raw[[v]] <- as.factor(raw[[v]])
 }
 
-# --- Complete Case Analysis (Sensitivity) ---
-cat("Running Complete Case models...\n")
-df_cc <- df %>%
-  select(all_of(vars_mi)) %>%
-  na.omit()
+df_cc <- raw |>
+  dplyr::select(all_of(c(all_vars, "fg_status", "fg_time", "event_d", "time_d"))) |>
+  tidyr::drop_na()
+cat(sprintf("[cc] Complete-case N = %d\n", nrow(df_cc)))
 
-cat("Complete Case N =", nrow(df_cc), "\n")
-
-# CC Mortality (Cox)
-fit_cox_cc <- coxph(Surv(time_d, as.numeric(as.character(event_d))) ~ age_group + sex + race_clean +
-  edu_clean + hiv_aids + diabetes + alcohol + drug_use +
-  incarcerated + homelessness + hosp_admission + clinical_clean + dot_status + tx_month_grp,
+fit_cox_cc <- coxph(as.formula(paste(
+  "Surv(time_d, as.numeric(as.character(event_d))) ~", mv_formula_rhs)),
   data = df_cc)
-res_cox_cc <- summary(fit_cox_cc)
+fg_cc_data <- finegray(Surv(fg_time, fg_status) ~ ., data = df_cc, etype = "1")
+fit_fg_cc  <- coxph(as.formula(paste(
+  "Surv(fgstart, fgstop, fgstatus) ~", mv_formula_rhs)),
+  data = fg_cc_data, weights = fgwt)
 
-# CC Retreatment (Fine-Gray)
-# Ensure fg_status is a factor in df_cc too
-df_cc$fg_status <- factor(df_cc$fg_status)
-fg_data_cc <- finegray(Surv(fg_time, fg_status) ~ ., data = df_cc, etype = "1")
-fit_fg_cc <- coxph(Surv(fgstart, fgstop, fgstatus) ~ age_group + sex + race_clean +
-  edu_clean + hiv_aids + diabetes + alcohol + drug_use +
-  incarcerated + homelessness + hosp_admission + clinical_clean + dot_status + tx_month_grp,
-  data = fg_data_cc, weights = fgwt)
-res_fg_cc <- summary(fit_fg_cc)
-
-# 5. Format and Save Results
-format_res <- function(summary_obj, model_name) {
-  # Handle both pooled (mice) and standard (coxph) summaries
-  if ("pool.summary" %in% class(summary_obj) || is.data.frame(summary_obj)) {
-    res_df <- as.data.frame(summary_obj)
-  } else {
-    # It is a standard coxph summary object
-    res_df <- as.data.frame(summary_obj$conf.int)
-    res_df$p.value <- summary_obj$coefficients[, "Pr(>|z|)"]
-    res_df$term <- rownames(res_df)
-    colnames(res_df)[1] <- "estimate"
-    colnames(res_df)[3] <- "conf.low"
-    colnames(res_df)[4] <- "conf.high"
-  }
-  
-  res_df %>%
-    mutate(
-      model = model_name,
-      estimate_str = paste0(
-        sprintf("%.2f", estimate), " (",
-        sprintf("%.2f", conf.low), "-",
-        sprintf("%.2f", conf.high), ")"
-      ),
-      p_value = case_when(
-        p.value < 0.001 ~ "<0.001",
-        TRUE ~ sprintf("%.3f", p.value)
-      )
-    ) %>%
-    select(model, term, estimate = estimate_str, p_value)
+# -- 5. Format results and save --------------------------------------------
+format_pooled <- function(d, model_name) {
+  d <- as.data.frame(d)
+  d$model <- model_name
+  d$estimate_str <- sprintf("%.2f (%.2f-%.2f)", d$estimate, d$conf.low, d$conf.high)
+  d$p_value <- ifelse(d$p.value < 0.001, "<0.001", sprintf("%.3f", d$p.value))
+  d[, c("model", "term", "estimate_str", "p_value")] |>
+    dplyr::rename(estimate = estimate_str)
 }
 
-# Special formatter for standard summary objects (non-pooled)
-format_std <- function(sum_obj, model_name) {
-  df_res <- as.data.frame(sum_obj$conf.int)
-  # Standard summary$conf.int columns: [exp(coef), exp(-coef), lower .95, upper .95]
-  df_res$p <- sum_obj$coefficients[, "Pr(>|z|)"]
-  df_res$term <- rownames(df_res)
-  
-  df_res %>%
-    mutate(
-      model = model_name,
-      estimate_str = paste0(
-        sprintf("%.2f", .data[[colnames(df_res)[1]]]), " (",
-        sprintf("%.2f", .data[[colnames(df_res)[3]]]), "-",
-        sprintf("%.2f", .data[[colnames(df_res)[4]]]), ")"
-      ),
-      p_val = ifelse(p < 0.001, "<0.001", sprintf("%.3f", p))
-    ) %>%
-    select(model, term, estimate = estimate_str, p_value = p_val)
+format_cc <- function(fit, model_name) {
+  s <- summary(fit)
+  d <- as.data.frame(s$conf.int)
+  colnames(d) <- c("estimate", "neg_estimate", "conf.low", "conf.high")
+  d$p.value <- s$coefficients[, "Pr(>|z|)"]
+  d$term <- rownames(d)
+  d$model <- model_name
+  d$estimate_str <- sprintf("%.2f (%.2f-%.2f)", d$estimate, d$conf.low, d$conf.high)
+  d$p_value <- ifelse(d$p.value < 0.001, "<0.001", sprintf("%.3f", d$p.value))
+  d[, c("model", "term", "estimate_str", "p_value")] |>
+    dplyr::rename(estimate = estimate_str)
 }
 
-final_results <- bind_rows(
-  format_res(pool_cox_mv, "Cox_Death_Adjusted_MI"),
-  format_res(pool_fg_mv, "FG_Retr_Adjusted_MI"),
-  format_std(res_cox_cc, "Cox_Death_Adjusted_CC"),
-  format_std(res_fg_cc, "FG_Retr_Adjusted_CC"),
-  format_res(uv_results %>% filter(model == "Cox_Death_Unadjusted"), "Cox_Death_Unadjusted"),
-  format_res(uv_results %>% filter(model == "FG_Retr_Unadjusted"), "FG_Retr_Unadjusted")
+final <- bind_rows(
+  format_pooled(pool_cox_mv, "Cox_Death_Adjusted_MI"),
+  format_pooled(pool_fg_mv,  "FG_Retr_Adjusted_MI"),
+  format_cc(fit_cox_cc,      "Cox_Death_Adjusted_CC"),
+  format_cc(fit_fg_cc,       "FG_Retr_Adjusted_CC"),
+  format_pooled(uv_df |> dplyr::filter(model == "Cox_Death_Unadjusted"),
+                "Cox_Death_Unadjusted"),
+  format_pooled(uv_df |> dplyr::filter(model == "FG_Retr_Unadjusted"),
+                "FG_Retr_Unadjusted")
 )
 
-write.csv(final_results, "ITT_Analysis/results/multivariable_results_mi_cc.csv", row.names = FALSE)
-cat("All pooled MI and CC results saved to ITT_Analysis/results/\n")
+out_csv <- file.path(ITT_RESULTS_DIR, "multivariable_results_mi_cc.csv")
+dir.create(ITT_RESULTS_DIR, showWarnings = FALSE, recursive = TRUE)
+write.csv(final, out_csv, row.names = FALSE)
+cat(sprintf("\n[done] Pooled MI + complete-case results -> %s\n", out_csv))
