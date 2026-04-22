@@ -127,6 +127,7 @@ pA <- ggplot(hr_tbl, aes(x = month_mid, y = HR)) +
               color = "#c0392b", fill = "#e74c3c",
               linewidth = 1.4, alpha = 0.22) +
   scale_y_log10(breaks = c(0.25, 0.5, 1, 2, 4, 8),
+                minor_breaks = c(0.33, 0.75, 1.5, 3, 6),
                 limits = c(0.15, 10)) +
   scale_x_continuous(breaks = seq(0, HORIZON, 0.25),
                      labels = function(x) paste0(round(x*12), "mo"),
@@ -137,7 +138,9 @@ pA <- ggplot(hr_tbl, aes(x = month_mid, y = HR)) +
        y = "HR (log scale)") +
   theme_classic(base_size = 11) +
   theme(plot.title = element_text(face = "bold", size = 13),
-        plot.subtitle = element_text(size = 9))
+        plot.subtitle = element_text(size = 9),
+        panel.grid.major.y = element_line(color = "grey88", linewidth = 0.35),
+        panel.grid.minor.y = element_line(color = "grey94", linewidth = 0.25))
 
 # ---------------------------------------------------------------------------
 # Panel B: Target-trial HR by month of abandonment — Early vs Late (MI-pooled)
@@ -167,7 +170,8 @@ pB <- ggplot(dfB, aes(x = Month, y = HR, color = Window, group = Window)) +
   geom_line(linewidth = 0.9, alpha = 0.8) +
   geom_point(size = 3.5) +
   scale_color_manual(values = palette_EL) +
-  scale_y_log10(breaks = c(0.25, 0.5, 1, 2, 4)) +
+  scale_y_log10(breaks = c(0.25, 0.5, 1, 2, 4),
+                minor_breaks = c(0.33, 0.75, 1.5, 3)) +
   scale_x_continuous(breaks = 1:6, labels = paste("Mo", 1:6)) +
   labs(title = "B. Mortality HR by month of LTFU",
        subtitle = "Sequential target-trial emulation; MI-pooled; Early = deaths in first 6 months from treatment start; Late = deaths 6-60 months",
@@ -177,7 +181,9 @@ pB <- ggplot(dfB, aes(x = Month, y = HR, color = Window, group = Window)) +
   theme_classic(base_size = 11) +
   theme(legend.position = "bottom",
         plot.title = element_text(face = "bold", size = 13),
-        plot.subtitle = element_text(size = 9))
+        plot.subtitle = element_text(size = 9),
+        panel.grid.major.y = element_line(color = "grey88", linewidth = 0.35),
+        panel.grid.minor.y = element_line(color = "grey94", linewidth = 0.25))
 
 # ---------------------------------------------------------------------------
 # Panel C: Subgroup forest — LATE mortality (MI-pooled, from 32b, 5-yr cap)
@@ -242,6 +248,7 @@ pC_forest <- ggplot(dfC, aes(x = HR, y = rowlabel, color = Subgroup_clean)) +
                  height = 0.25, linewidth = 0.8) +
   geom_point(size = 3.4) +
   scale_x_log10(breaks = c(0.5, 1, 2, 3, 4),
+                minor_breaks = c(0.75, 1.5, 2.5, 3.5),
                 limits = c(0.7, 5)) +
   scale_color_brewer(palette = "Dark2") +
   labs(x = "Hazard ratio (log scale)", y = NULL, color = NULL) +
@@ -251,6 +258,8 @@ pC_forest <- ggplot(dfC, aes(x = HR, y = rowlabel, color = Subgroup_clean)) +
         axis.text.y = element_blank(),
         axis.ticks.y = element_blank(),
         axis.line.y = element_blank(),
+        panel.grid.major.x = element_line(color = "grey88", linewidth = 0.35),
+        panel.grid.minor.x = element_line(color = "grey94", linewidth = 0.25),
         plot.margin = margin(30, 8, 5, 0))
 
 pC <- pC_text + pC_forest + plot_layout(widths = c(1.4, 1))
