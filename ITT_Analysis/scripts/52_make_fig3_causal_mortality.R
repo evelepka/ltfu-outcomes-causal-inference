@@ -120,17 +120,19 @@ write.csv(hr_tbl,
 
 pA <- ggplot(hr_tbl, aes(x = month_mid, y = HR)) +
   geom_hline(yintercept = 1, linetype = "dashed", linewidth = 0.5) +
-  geom_ribbon(aes(ymin = CI_L, ymax = CI_H),
-              alpha = 0.18, fill = "#e74c3c") +
-  geom_line(color = "#c0392b", linewidth = 1.0) +
-  geom_point(color = "#c0392b", size = 1.8) +
+  # LOESS smooth on the log10 scale (the scale_y_log10 transforms data first,
+  # so geom_smooth fits on log-HR). Points are kept faint for transparency.
+  geom_point(color = "#c0392b", size = 1.6, alpha = 0.35) +
+  geom_smooth(method = "loess", span = 0.55, se = TRUE,
+              color = "#c0392b", fill = "#e74c3c",
+              linewidth = 1.4, alpha = 0.22) +
   scale_y_log10(breaks = c(0.25, 0.5, 1, 2, 4, 8),
                 limits = c(0.15, 10)) +
   scale_x_continuous(breaks = seq(0, HORIZON, 0.25),
                      labels = function(x) paste0(round(x*12), "mo"),
                      limits = c(0, HORIZON)) +
   labs(title = "A. Time-varying hazard ratio (crude, counting-process)",
-       subtitle = "Piecewise monthly HR for abandoners vs. those still on treatment at that instant; 2-year horizon.\nEarly months: apparent HR < 1 (immortal-time artefact). Later months: HR grows, reflecting accumulated abandonment mortality.",
+       subtitle = "Piecewise monthly HR for abandoners vs. those still on treatment at that instant; LOESS smooth with 95% band.\nEarly months: apparent HR < 1 (immortal-time artefact). Later months: HR grows, reflecting accumulated abandonment mortality.",
        x = "Time since treatment start",
        y = "HR (log scale)") +
   theme_classic(base_size = 11) +
@@ -208,24 +210,39 @@ dfC$Subgroup_clean <- factor(dfC$Subgroup_clean,
 dfC <- dfC |> dplyr::arrange(Subgroup_clean, Level) |>
   dplyr::mutate(rowlabel = factor(rowlabel, levels = rev(unique(rowlabel))))
 
-pC <- ggplot(dfC, aes(x = HR, y = rowlabel, color = Subgroup_clean)) +
+# Fold the HR (95% CI) text into the y-axis label so it sits in the
+# whitespace next to the category name instead of overlapping the
+# forest plot. Columns are kept visually separate by padding with spaces.
+dfC$hr_text <- sprintf("%.2f (%.2f-%.2f)", dfC$HR, dfC$CI_L, dfC$CI_H)
+
+# Pad category labels + HR text into fixed-width columns
+max_label <- max(nchar(as.character(dfC$rowlabel)))
+max_hr    <- max(nchar(dfC$hr_text))
+dfC$y_label <- sprintf(
+  paste0("%-", max_label, "s    %-", max_hr, "s"),
+  dfC$rowlabel, dfC$hr_text
+)
+# Preserve the existing row order from the rowlabel factor
+dfC$y_label <- factor(dfC$y_label,
+                      levels = dfC$y_label[match(levels(dfC$rowlabel),
+                                                 dfC$rowlabel)])
+
+pC <- ggplot(dfC, aes(x = HR, y = y_label, color = Subgroup_clean)) +
   geom_vline(xintercept = 1, linetype = "dashed", linewidth = 0.5) +
   geom_errorbarh(aes(xmin = CI_L, xmax = CI_H),
-                 height = 0.15, linewidth = 0.7) +
+                 height = 0.2, linewidth = 0.7) +
   geom_point(size = 3) +
-  geom_text(aes(label = sprintf("%.2f (%.2f-%.2f)", HR, CI_L, CI_H)),
-            hjust = -0.15, size = 3.2, color = "black") +
-  scale_x_log10(breaks = c(0.5, 0.75, 1, 1.5, 2, 3, 4),
-                limits = c(0.4, 8)) +
+  scale_x_log10(breaks = c(0.5, 1, 1.5, 2, 3, 4),
+                limits = c(0.7, 5)) +
   scale_color_brewer(palette = "Dark2") +
   labs(title = "C. Late-mortality HR by subgroup",
-       subtitle = "Sequential target-trial emulation; late mortality = deaths 6-60 months from treatment start; MI-pooled",
+       subtitle = "Sequential target-trial emulation; deaths 6-60 months from treatment start; MI-pooled",
        x = "Hazard ratio (log scale)", y = NULL, color = NULL) +
   theme_classic(base_size = 11) +
   theme(legend.position = "bottom",
         plot.title = element_text(face = "bold", size = 13),
         plot.subtitle = element_text(size = 9),
-        axis.text.y = element_text(size = 10))
+        axis.text.y = element_text(size = 10, family = "mono", hjust = 0))
 
 # ---------------------------------------------------------------------------
 # Compose: A on top, B and C side-by-side beneath

@@ -262,24 +262,22 @@ annotations.append(dict(
 ))
 
 fig.update_layout(
-    title=dict(
-        text=f"<b>TB trajectories after loss to follow-up</b>"
-             f"<br><sup>São Paulo | LTFU cohort N = {TOTAL:,} | follow-up through {CENSOR_DATE.date()}</sup>",
-        x=0.5, xanchor="center",
-        font=dict(size=18, family="Arial", color="#1a1a2e")
-    ),
-    font=dict(size=11, family="Arial", color="#2c2c2c"),
+    # No plotly title — the surrounding figure (Figure 1) carries its own
+    # panel title "A. TB trajectories after loss to follow-up". Keeping a
+    # duplicate here caused visible collision in the composed Figure 1.
+    font=dict(size=12, family="Arial", color="#2c2c2c"),
     paper_bgcolor="#F8F9FA",
     plot_bgcolor="#F8F9FA",
-    height=650, width=1500,
-    margin=dict(l=30, r=30, t=120, b=140),
+    # Compact aspect (~1.1:1) so the left panel of Figure 1 doesn't stretch it.
+    height=1000, width=1100,
+    margin=dict(l=30, r=30, t=50, b=140),
     annotations=annotations,
 )
 
 fig.write_html(str(OUT_HTML), include_plotlyjs="cdn", full_html=True)
 print(f"\nWrote {OUT_HTML}")
 try:
-    fig.write_image(str(OUT_PNG), width=1600, height=800, scale=2)
+    fig.write_image(str(OUT_PNG), width=1100, height=1000, scale=2)
     print(f"Wrote {OUT_PNG}")
 except Exception as e:
     print(f"PNG export skipped: {e}")
