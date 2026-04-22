@@ -1,0 +1,175 @@
+# 50. Figure 1 — Descriptive panel
+# ==============================================================================
+# Two-part figure for the LTFU subgroup (N = 21,619).
+#   A. Alluvial diagram: LTFU → retreatment (Yes/No) → mortality (Yes/No)
+#   B. Raincloud triptych:
+#        i. Timing of abandonment (months from treatment start, 0-6)
+#       ii. Time to retreatment (years since LTFU, 0-12; among those who retreated)
+#      iii. Time to mortality   (years since LTFU, 0-12; among those who died)
+# ==============================================================================
+
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(ggplot2)
+  library(ggalluvial)
+  library(patchwork)
+  library(scales)
+})
+
+.here <- function() {
+  args <- commandArgs(trailingOnly = FALSE)
+  file_arg <- grep("^--file=", args, value = TRUE)
+  if (length(file_arg)) return(dirname(normalizePath(sub("^--file=", "", file_arg[1]))))
+  frames <- sys.frames()
+  for (f in rev(frames)) {
+    of <- f$ofile
+    if (!is.null(of)) return(dirname(normalizePath(of)))
+  }
+  getwd()
+}
+source(file.path(.here(), "_paths.R"))
+
+OUT_PNG <- file.path(ITT_RESULTS_DIR, "Figure_1_descriptive.png")
+OUT_PDF <- file.path(ITT_RESULTS_DIR, "Figure_1_descriptive.pdf")
+
+cohort <- read.csv(COHORT_CSV, stringsAsFactors = FALSE)
+ltfu <- cohort |> dplyr::filter(itt_group == "Loss to follow-up")
+cat(sprintf("[fig1] LTFU N = %d\n", nrow(ltfu)))
+
+# ---------------------------------------------------------------------------
+# Panel A — alluvial: LTFU → retreatment → death
+# ---------------------------------------------------------------------------
+df_flow <- ltfu |>
+  dplyr::mutate(
+    Retreatment = factor(ifelse(event_rn == 1, "Retreated", "Not retreated"),
+                         levels = c("Retreated", "Not retreated")),
+    Outcome = factor(ifelse(event_d == 1, "Died", "Survived"),
+                     levels = c("Survived", "Died"))
+  ) |>
+  dplyr::count(Retreatment, Outcome, name = "freq")
+
+# Derive a few headline statistics for the caption
+n_ltfu  <- nrow(ltfu)
+n_retx  <- sum(ltfu$event_rn == 1)
+n_die   <- sum(ltfu$event_d == 1)
+med_retx_yr  <- median(ltfu$time_rn[ltfu$event_rn == 1], na.rm = TRUE)
+med_death_yr <- median(ltfu$time_d[ltfu$event_d == 1], na.rm = TRUE)
+
+palette_outcome <- c("Survived" = "#1f78b4", "Died" = "#e31a1c")
+
+pA <- ggplot(df_flow,
+             aes(y = freq, axis1 = Retreatment, axis2 = Outcome)) +
+  geom_alluvium(aes(fill = Outcome), width = 1/8, alpha = 0.85) +
+  geom_stratum(width = 1/4, fill = "grey92", color = "grey40") +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)),
+            size = 3.8, fontface = "bold") +
+  geom_text(stat = "stratum",
+            aes(label = after_stat(scales::comma(count))),
+            size = 3.0, vjust = 2.2) +
+  scale_fill_manual(values = palette_outcome) +
+  scale_x_discrete(limits = c("Retreatment", "Mortality"),
+                   expand = c(.08, .08)) +
+  labs(title = "A. Clinical flow after loss to follow-up",
+       subtitle = sprintf("N = %s individuals; %s retreated (median %.1f yr); %s died (median %.1f yr)",
+                          scales::comma(n_ltfu),
+                          scales::comma(n_retx), med_retx_yr,
+                          scales::comma(n_die),  med_death_yr),
+       y = "Number of individuals", fill = NULL) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "bottom",
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(face = "bold", size = 11),
+        plot.title = element_text(face = "bold", size = 13))
+
+# ---------------------------------------------------------------------------
+# Panel B — raincloud triptych
+# ---------------------------------------------------------------------------
+ltfu$abandon_months <- as.numeric(difftime(as.Date(ltfu$end_date),
+                                           as.Date(ltfu$best_start),
+                                           units = "days")) / 30.4
+
+df_aband <- ltfu |> dplyr::filter(abandon_months >= 0, abandon_months <= 6)
+df_retx  <- ltfu |> dplyr::filter(event_rn == 1, time_rn <= 12)
+df_death <- ltfu |> dplyr::filter(event_d  == 1, time_d  <= 12)
+
+build_raincloud <- function(df, x_var, x_label, title_text, fill_color,
+                             x_limits, x_breaks, median_suffix = "") {
+  med_val <- median(df[[x_var]], na.rm = TRUE)
+  dens <- density(df[[x_var]], na.rm = TRUE)
+  max_d <- max(dens$y)
+  df$jitter_y <- runif(nrow(df), -max_d * 0.28, -max_d * 0.04)
+
+  ggplot(df, aes(x = .data[[x_var]])) +
+    geom_density(fill = fill_color, color = NA, alpha = 0.6) +
+    geom_point(aes(y = jitter_y), color = fill_color,
+               alpha = 0.15, size = 0.5, position = "jitter") +
+    geom_hline(yintercept = 0, color = "black", linewidth = 0.4) +
+    geom_vline(xintercept = med_val, linetype = "dashed",
+               color = "black", linewidth = 0.5) +
+    annotate("text",
+             x = med_val, y = max_d * 1.05,
+             label = sprintf("median = %.2f%s", med_val, median_suffix),
+             hjust = -0.05, size = 3.2, fontface = "italic") +
+    scale_x_continuous(limits = x_limits, breaks = x_breaks) +
+    labs(title = title_text, x = x_label, y = NULL) +
+    theme_minimal(base_size = 11) +
+    theme(plot.title = element_text(face = "bold", size = 11),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.grid.major.y = element_blank())
+}
+
+pR1 <- build_raincloud(df_aband, "abandon_months",
+                       "Months from treatment start",
+                       sprintf("B.i  Timing of abandonment (N = %s)",
+                               scales::comma(nrow(df_aband))),
+                       "#e74c3c", c(0, 6), 0:6, " mo")
+pR2 <- build_raincloud(df_retx, "time_rn",
+                       "Years since LTFU",
+                       sprintf("B.ii  Time to retreatment (N = %s)",
+                               scales::comma(nrow(df_retx))),
+                       "#f1c40f", c(0, 12), seq(0, 12, 2), " yr")
+pR3 <- build_raincloud(df_death, "time_d",
+                       "Years since LTFU",
+                       sprintf("B.iii  Time to mortality (N = %s)",
+                               scales::comma(nrow(df_death))),
+                       "#2c3e50", c(0, 12), seq(0, 12, 2), " yr")
+
+panelB <- pR1 / pR2 / pR3 +
+  plot_annotation(title = "B. Event timing among abandoners",
+                  theme = theme(plot.title = element_text(face = "bold",
+                                                           size = 13)))
+
+# ---------------------------------------------------------------------------
+# Compose — Panel A on left, Panel B stack on right
+# ---------------------------------------------------------------------------
+fig1 <- (pA | (pR1 / pR2 / pR3)) +
+  plot_layout(widths = c(1.1, 1)) +
+  plot_annotation(
+    theme = theme(plot.background = element_rect(fill = "white", color = NA))
+  )
+
+ggsave(OUT_PNG, fig1, width = 14, height = 9, dpi = 300, bg = "white")
+ggsave(OUT_PDF, fig1, width = 14, height = 9, bg = "white")
+cat(sprintf("[fig1] Wrote %s\n", OUT_PNG))
+cat(sprintf("[fig1] Wrote %s\n", OUT_PDF))
+
+# ---------------------------------------------------------------------------
+# Side output: summary numbers for the figure caption
+# ---------------------------------------------------------------------------
+cat_summary <- data.frame(
+  n_ltfu                           = n_ltfu,
+  n_retreated                      = n_retx,
+  pct_retreated                    = round(100 * n_retx / n_ltfu, 1),
+  n_died                           = n_die,
+  pct_died                         = round(100 * n_die / n_ltfu, 1),
+  median_months_to_abandonment     = round(median(df_aband$abandon_months, na.rm = TRUE), 2),
+  median_years_to_retreatment      = round(med_retx_yr, 2),
+  median_years_to_mortality        = round(med_death_yr, 2)
+)
+write.csv(cat_summary,
+          file.path(ITT_RESULTS_DIR, "Figure_1_caption_stats.csv"),
+          row.names = FALSE)
+cat("[fig1] Wrote caption stats\n")
