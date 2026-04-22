@@ -106,7 +106,7 @@ build_raincloud <- function(df, x_var, x_label, title_text, fill_color,
 
 pR1 <- build_raincloud(df_aband, "abandon_months",
                        "Months from treatment start",
-                       sprintf("B.i  Timing of abandonment (N = %s)",
+                       sprintf("B.i  Timing of loss to follow-up (N = %s)",
                                scales::comma(nrow(df_aband))),
                        "#e74c3c", c(0, 6), 0:6, " mo")
 pR2 <- build_raincloud(df_retx, "time_rn",

@@ -210,39 +210,50 @@ dfC$Subgroup_clean <- factor(dfC$Subgroup_clean,
 dfC <- dfC |> dplyr::arrange(Subgroup_clean, Level) |>
   dplyr::mutate(rowlabel = factor(rowlabel, levels = rev(unique(rowlabel))))
 
-# Fold the HR (95% CI) text into the y-axis label so it sits in the
-# whitespace next to the category name instead of overlapping the
-# forest plot. Columns are kept visually separate by padding with spaces.
-dfC$hr_text <- sprintf("%.2f (%.2f-%.2f)", dfC$HR, dfC$CI_L, dfC$CI_H)
+# Two-panel forest: left panel = row labels + HR text (sans-serif);
+# right panel = point + CI bars. patchwork shares the y-axis ordering
+# via the common factor in dfC$rowlabel.
+dfC$hr_text <- sprintf("%.2f (%.2f–%.2f)", dfC$HR, dfC$CI_L, dfC$CI_H)
 
-# Pad category labels + HR text into fixed-width columns
-max_label <- max(nchar(as.character(dfC$rowlabel)))
-max_hr    <- max(nchar(dfC$hr_text))
-dfC$y_label <- sprintf(
-  paste0("%-", max_label, "s    %-", max_hr, "s"),
-  dfC$rowlabel, dfC$hr_text
-)
-# Preserve the existing row order from the rowlabel factor
-dfC$y_label <- factor(dfC$y_label,
-                      levels = dfC$y_label[match(levels(dfC$rowlabel),
-                                                 dfC$rowlabel)])
+# Add a horizontal "group header" row between subgroup categories
+# (we'll approximate via colored row labels; ggplot doesn't do true headers).
+pC_text <- ggplot(dfC, aes(y = rowlabel)) +
+  # Row label on the far left, colored by subgroup
+  geom_text(aes(x = 0, label = rowlabel, color = Subgroup_clean),
+            hjust = 0, size = 3.6, fontface = "plain") +
+  # HR text on the right of the text panel, dark grey
+  geom_text(aes(x = 1, label = hr_text),
+            hjust = 1, size = 3.5, color = "grey25") +
+  scale_x_continuous(limits = c(-0.02, 1.02), expand = c(0, 0)) +
+  scale_color_brewer(palette = "Dark2", guide = "none") +
+  labs(title = "C. Late-mortality HR by subgroup",
+       subtitle = "Sequential target-trial emulation; deaths 6–60 months from treatment start; MI-pooled") +
+  theme_void(base_size = 11) +
+  theme(plot.title = element_text(face = "bold", size = 13,
+                                   margin = margin(b = 2)),
+        plot.subtitle = element_text(size = 9, color = "grey40",
+                                     margin = margin(b = 8)),
+        plot.margin = margin(5, 2, 20, 8))
 
-pC <- ggplot(dfC, aes(x = HR, y = y_label, color = Subgroup_clean)) +
-  geom_vline(xintercept = 1, linetype = "dashed", linewidth = 0.5) +
+pC_forest <- ggplot(dfC, aes(x = HR, y = rowlabel, color = Subgroup_clean)) +
+  geom_vline(xintercept = 1, linetype = "dashed", linewidth = 0.5,
+             color = "grey50") +
   geom_errorbarh(aes(xmin = CI_L, xmax = CI_H),
-                 height = 0.2, linewidth = 0.7) +
-  geom_point(size = 3) +
-  scale_x_log10(breaks = c(0.5, 1, 1.5, 2, 3, 4),
+                 height = 0.25, linewidth = 0.8) +
+  geom_point(size = 3.4) +
+  scale_x_log10(breaks = c(0.5, 1, 2, 3, 4),
                 limits = c(0.7, 5)) +
   scale_color_brewer(palette = "Dark2") +
-  labs(title = "C. Late-mortality HR by subgroup",
-       subtitle = "Sequential target-trial emulation; deaths 6-60 months from treatment start; MI-pooled",
-       x = "Hazard ratio (log scale)", y = NULL, color = NULL) +
+  labs(x = "Hazard ratio (log scale)", y = NULL, color = NULL) +
   theme_classic(base_size = 11) +
   theme(legend.position = "bottom",
-        plot.title = element_text(face = "bold", size = 13),
-        plot.subtitle = element_text(size = 9),
-        axis.text.y = element_text(size = 10, family = "mono", hjust = 0))
+        legend.margin = margin(t = 8),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.line.y = element_blank(),
+        plot.margin = margin(30, 8, 5, 0))
+
+pC <- pC_text + pC_forest + plot_layout(widths = c(1.4, 1))
 
 # ---------------------------------------------------------------------------
 # Compose: A on top, B and C side-by-side beneath

@@ -65,17 +65,18 @@ MIN_FLOW = 5  # hide tiny flows
 ABANDON_OUTCOMES = {"Abandono", "Abandono Primario", "Faltoso"}
 OBITO_OUTCOMES = {"Obito TB", "Obito NTB"}
 
-# Palette — muted pastels with strong accent for each outcome
+# Palette — muted pastels with strong accent for each outcome.
+# Short labels keep text inside their column; count/% appended by renderer.
 NODE_COLORS = {
-    "Index Loss to Follow Up":    "rgba(142,  68, 173, 0.90)",  # purple
-    "Retreatment":                "rgba( 41, 128, 185, 0.90)",  # blue
-    "Died (without retreatment)": "rgba( 44,  62,  80, 0.90)",  # dark
-    "No further outcome available":"rgba(176, 190, 197, 0.90)", # grey
-    "Lost to follow up":          "rgba(231,  76,  60, 0.90)",  # red
-    "Cured":                      "rgba( 46, 204, 113, 0.90)",  # green
-    "Died":                       "rgba( 44,  62,  80, 0.90)",  # dark
-    "Failure":                    "rgba(230, 126,  34, 0.90)",  # orange
-    "Other/no further outcome available": "rgba(176, 190, 197, 0.90)",
+    "Index Loss to Follow Up":       "rgba(142,  68, 173, 0.90)",  # purple
+    "Retreatment":                   "rgba( 41, 128, 185, 0.90)",  # blue
+    "Died (no retreatment)":         "rgba( 44,  62,  80, 0.90)",  # dark
+    "No further outcome":            "rgba(176, 190, 197, 0.90)",  # grey
+    "Lost to follow up":             "rgba(231,  76,  60, 0.90)",  # red
+    "Cured":                         "rgba( 46, 204, 113, 0.90)",  # green
+    "Died":                          "rgba( 44,  62,  80, 0.90)",  # dark
+    "Failure":                       "rgba(230, 126,  34, 0.90)",  # orange
+    "Other":                         "rgba(176, 190, 197, 0.90)",
 }
 LINK_COLORS = {k: v.replace("0.90", "0.32") for k, v in NODE_COLORS.items()}
 
@@ -123,7 +124,7 @@ def classify_retreat_outcome(outcome: str, ep_end, death_date) -> str:
         ref = ep_end if pd.notna(ep_end) else pd.NaT
         if pd.notna(ref) and death_date > ref:
             return "Died"
-    return "Other/no further outcome available"
+    return "Other"
 
 
 full_by_id = {str(sid): grp for sid, grp in full.groupby("sinan_clean")}
@@ -136,14 +137,12 @@ def col1_and_retx_outcome(row):
     grp = full_by_id.get(sid, pd.DataFrame())
     later = grp[grp["notification_date"] > idx_end].sort_values("notification_date") if len(grp) else pd.DataFrame()
     if len(later) == 0:
-        # No retreatment episode on file
         if pd.notna(death) and death <= CENSOR_DATE and death > idx_end:
-            return pd.Series(["Died (without retreatment)", None])
-        return pd.Series(["No further outcome available", None])
-    # Retreatment exists — but did they die BEFORE retreatment notification?
+            return pd.Series(["Died (no retreatment)", None])
+        return pd.Series(["No further outcome", None])
     first_retx_date = later.iloc[0]["notification_date"]
     if pd.notna(death) and death <= CENSOR_DATE and death <= first_retx_date:
-        return pd.Series(["Died (without retreatment)", None])
+        return pd.Series(["Died (no retreatment)", None])
     ep = later.iloc[0]
     retx_out = classify_retreat_outcome(ep.get("case_outcome"), ep.get("end_date"), death)
     return pd.Series(["Retreatment", retx_out])
@@ -167,17 +166,30 @@ for v, c in retreated["col2"].value_counts().items():
 # ---------------------------------------------------------------------------
 TOTAL = len(ltfu)
 
+# Order controls visual stacking top-to-bottom within each column.
+# Col 1: Died (small) on top, Retreatment in middle, No further outcome (largest) on bottom.
+# Col 2: stacked smallest-to-largest — Failure, Other, Died, Cured, Lost to follow up.
 ALL_NODES_ORDERED = [
     (0, "Index Loss to Follow Up"),
+    (1, "Died (no retreatment)"),
     (1, "Retreatment"),
-    (1, "Died (without retreatment)"),
-    (1, "No further outcome available"),
-    (2, "Lost to follow up"),
-    (2, "Cured"),
-    (2, "Died"),
+    (1, "No further outcome"),
     (2, "Failure"),
-    (2, "Other/no further outcome available"),
+    (2, "Other"),
+    (2, "Died"),
+    (2, "Cured"),
+    (2, "Lost to follow up"),
 ]
+
+# Explicit y-positions (0=top, 1=bottom). Cumulative-proportion stacking;
+# small padding between nodes. Anchored to the current flow counts so
+# bar heights and y-offsets match.
+def _node_y_positions():
+    y = {}
+    # Col 0
+    y[(0, "Index Loss to Follow Up")] = 0.5
+    return y
+# Position calculation happens later, after counts are tallied.
 node_idx = {n: i for i, n in enumerate(ALL_NODES_ORDERED)}
 node_size = defaultdict(int)
 flows = defaultdict(int)
@@ -191,9 +203,42 @@ for _, row in retreated.iterrows():
     node_size[(2, row["col2"])] += 1
     flows[((1, "Retreatment"), (2, row["col2"]))] += 1
 
-X_POSITIONS = {0: 0.01, 1: 0.5, 2: 0.99}
+X_POSITIONS = {0: 0.01, 1: 0.45, 2: 0.99}
 
-node_labels, node_colors_arr, node_x = [], [], []
+# Derive explicit y-positions within each column by stacking proportionally to
+# the flow counts (top → bottom in ALL_NODES_ORDERED). Small padding between
+# nodes keeps ribbons distinct.
+PAD = 0.03
+def _stack_y(col_nodes, denom):
+    """Return dict(label -> y) stacking by proportion of denom."""
+    y_pos = {}
+    cursor = 0.0
+    for lab in col_nodes:
+        h = node_size.get((col_nodes.index(lab) + 0, lab), 0) / denom if denom else 0
+        y_pos[lab] = cursor
+        cursor += h + PAD
+    return y_pos
+
+col1_labs = [lab for c, lab in ALL_NODES_ORDERED if c == 1]
+col2_labs = [lab for c, lab in ALL_NODES_ORDERED if c == 2]
+col1_counts = {lab: node_size.get((1, lab), 0) for lab in col1_labs}
+col2_counts = {lab: node_size.get((2, lab), 0) for lab in col2_labs}
+col1_total = sum(col1_counts.values()) or 1
+col2_total = sum(col2_counts.values()) or 1
+
+def stack(col_labs, col_counts, col_total):
+    ys = {}
+    cursor = 0.0
+    for lab in col_labs:
+        prop = col_counts[lab] / col_total
+        ys[lab] = max(0.001, cursor + prop / 2)
+        cursor += prop + PAD
+    return ys
+
+col1_y = stack(col1_labs, col1_counts, col1_total)
+col2_y = stack(col2_labs, col2_counts, col2_total)
+
+node_labels, node_colors_arr, node_x, node_y_list = [], [], [], []
 for col, lab in ALL_NODES_ORDERED:
     count = node_size.get((col, lab), 0)
     if count == 0:
@@ -203,13 +248,19 @@ for col, lab in ALL_NODES_ORDERED:
         if col == 2:
             denom = node_size.get((1, "Retreatment"), TOTAL)
             pct2 = count / denom * 100 if denom else 0
-            node_labels.append(f"<b>{lab}</b><br>{count:,} ({pct2:.1f}%)")
+            node_labels.append(f"<b>{lab}</b> — {count:,} ({pct2:.1f}%)")
         elif col == 1:
             node_labels.append(f"<b>{lab}</b><br>{count:,} ({pct:.1f}%)")
         else:
             node_labels.append(f"<b>{lab}</b><br>N = {count:,}")
     node_colors_arr.append(NODE_COLORS.get(lab, "rgba(150,150,150,0.85)"))
     node_x.append(X_POSITIONS[col])
+    if col == 0:
+        node_y_list.append(0.5)
+    elif col == 1:
+        node_y_list.append(col1_y[lab])
+    else:
+        node_y_list.append(col2_y[lab])
 
 link_src, link_dst, link_val, link_col, link_lab = [], [], [], [], []
 for (src_node, dst_node), cnt in flows.items():
@@ -222,13 +273,14 @@ for (src_node, dst_node), cnt in flows.items():
     link_lab.append(f"{src_node[1]} → {dst_node[1]}<br>{cnt:,} individuals ({cnt/TOTAL*100:.1f}%)")
 
 fig = go.Figure(go.Sankey(
-    arrangement="snap",
+    arrangement="fixed",
     node=dict(
         pad=22, thickness=24,
         line=dict(color="white", width=0.8),
         label=node_labels,
         color=node_colors_arr,
         x=node_x,
+        y=node_y_list,
         hovertemplate="%{label}<extra></extra>",
     ),
     link=dict(
