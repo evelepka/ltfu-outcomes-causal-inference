@@ -50,13 +50,13 @@ for (m in 1:6) {
   start_yrs <- start_days / 365.25
   end_yrs   <- end_days / 365.25
   
-  df_trial <- df_c %>% filter(time_d > start_yrs) %>%
+  df_trial <- df_c %>% filter(time_d_tx > start_yrs) %>%
     mutate(
       eligible = ifelse(itt_group == "Non-LTFU" | tx_duration_yrs >= start_yrs, 1, 0)
     ) %>% filter(eligible == 1) %>%
     mutate(
       expose = ifelse(itt_group == "Loss to follow-up" & tx_duration_yrs >= start_yrs & tx_duration_yrs < end_yrs, 1, 0),
-      time_followup = time_d - start_yrs,
+      time_followup = time_d_tx - start_yrs,
       # 2-year administrative censoring
       event_d = ifelse(time_followup > 2.0, 0, event_d),
       time_followup = ifelse(time_followup > 2.0, 2.0, time_followup)

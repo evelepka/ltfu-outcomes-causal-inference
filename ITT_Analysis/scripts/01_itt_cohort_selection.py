@@ -198,6 +198,25 @@ itt_cohort["diagnosis_setting"] = itt_cohort["disease_discovery"].replace({
 })
 itt_cohort["lab_confirmed_stat"] = itt_cohort["lab_confirmed"].apply(lambda x: "Yes" if x == 1 else ("No" if x == 0 else np.nan))
 
+# New Bacteriological Covariates
+itt_cohort["bac1_clean"] = itt_cohort["bac1"].replace({
+    "Pos": "Positive", "Neg": "Negative", "N/realiz": "Not Evaluated", "S/inf": "Not Evaluated", "And": "Not Evaluated"
+}).fillna("Not Evaluated")
+
+itt_cohort["sputum_culture_clean"] = itt_cohort["sputum_culture"].replace({
+    "Pos": "Positive", "Neg": "Negative", "N/realiz": "Not Evaluated", "S/inf": "Not Evaluated", "And": "Not Evaluated"
+}).fillna("Not Evaluated")
+
+# For resistance, any recorded state means drug susceptibility testing was performed, NA means not evaluated
+def parse_res(r):
+    if pd.isna(r): return "Not Evaluated"
+    r_str = str(r).upper().strip()
+    if r_str == "SENS": return "Sensitive"
+    if "TB MR" in r_str or "TB R" in r_str: return "Resistant (Any)"
+    if r_str == "AND": return "Not Evaluated"
+    return "Not Evaluated"
+itt_cohort["resistance_clean"] = itt_cohort["resistance"].apply(parse_res)
+
 # Treatment duration for the index episode
 itt_cohort["tx_days"] = (itt_cohort["end_date"] - itt_cohort["best_start"]).dt.days
 def tx_grp(d):
@@ -210,7 +229,8 @@ itt_cohort["tx_month_grp"] = itt_cohort["tx_days"].apply(tx_grp)
 keep_cols = ["sinan_clean", "age_tb", "age_group", "sex", "race_clean", "edu_clean", "hiv_aids", 
              "incarcerated", "homelessness", "dot_status", "alcohol", "drug_use", "mental_health", 
              "clinical_clean", "diagnosis_setting", "lab_confirmed_stat", "diabetes", "tobacco_use", 
-             "hosp_admission", "itt_group", "best_start", "end_date", "death_date", "tx_month_grp",
+             "hosp_admission", "other_immuno_condition", "bac1_clean", "sputum_culture_clean", "resistance_clean",
+             "itt_group", "best_start", "end_date", "death_date", "tx_month_grp",
              "time_rn", "event_rn", "time_d", "event_d", "time_rn_tx", "time_d_tx"]
 
 # re-organize for better readability (Time variables at the end)

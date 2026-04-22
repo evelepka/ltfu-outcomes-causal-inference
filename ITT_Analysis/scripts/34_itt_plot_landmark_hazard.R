@@ -20,7 +20,7 @@ df$date_end <- as.Date(df$end_date)
 df$tx_duration_yrs <- as.numeric(difftime(df$date_end, df$date_start, units="days")) / 365.25
 
 # Only include patients who survived to the landmark
-df_lm <- df %>% filter(time_d > lm_yrs)
+df_lm <- df %>% filter(time_d_tx > lm_yrs)
 
 # Define exposure exactly at landmark: Did you abandon before Month 2?
 df_lm <- df_lm %>%
@@ -28,7 +28,7 @@ df_lm <- df_lm %>%
     expose = ifelse(itt_group == "Loss to follow-up" & tx_duration_yrs <= lm_yrs, 
                    "Early Abandonment (Months 1-2)", 
                    "Persistent Care (Active or Cured)"),
-    time_followup = time_d - lm_yrs,
+    time_followup = time_d_tx - lm_yrs,
     # Cap follow-up at 5 years
     event_d = ifelse(time_followup > 5, 0, event_d),
     time_followup = ifelse(time_followup > 5, 5, time_followup)

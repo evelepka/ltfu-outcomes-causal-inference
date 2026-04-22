@@ -17,7 +17,7 @@ clean_data <- function(data) {
   mutate(across(c(race_clean, edu_clean, dot_status, alcohol, drug_use, diabetes, hosp_admission, hiv_aids, clinical_clean, incarcerated, homelessness), ~ as.factor(.))) %>%
   mutate(
     sex = factor(sex, levels = c("Female", "Male")),
-    age_group = factor(age_group, levels = c("15-24", "25-44", "45-64", "≥65"))
+    age_group = factor(age_group, levels = c("15-24", "25-44", "45-64", "65+"))
   ) %>% tidyr::drop_na(age_group, sex, race_clean, edu_clean, hiv_aids, diabetes, alcohol, drug_use, incarcerated, homelessness, hosp_admission, clinical_clean, dot_status)
 }
 

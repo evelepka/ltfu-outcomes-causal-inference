@@ -43,10 +43,10 @@ cat("\n--- 2. Panel A: Naive Crude Observational Survival (Immortal Time Bias) -
 # Cap follow-up at 2 years to match TT scale
 df_naive <- df %>%
   mutate(
-    event_d = ifelse(time_d > 2.0, 0, event_d),
-    time_d = ifelse(time_d > 2.0, 2.0, time_d)
+    event_d = ifelse(time_d_tx > 2.0, 0, event_d),
+    time_d_tx = ifelse(time_d_tx > 2.0, 2.0, time_d_tx)
   )
-fit_naive <- survfit(Surv(time_d, event_d) ~ itt_group, data = df_naive)
+fit_naive <- survfit(Surv(time_d_tx, event_d) ~ itt_group, data = df_naive)
 
 df_p_naive <- data.frame(
   Time = fit_naive$time,
@@ -64,13 +64,13 @@ m <- 2
 start_yrs <- ((m - 1) * 30) / 365.25
 end_yrs   <- (m * 30) / 365.25
 
-df_trial <- df_c %>% filter(time_d > start_yrs) %>%
+df_trial <- df_c %>% filter(time_d_tx > start_yrs) %>%
   mutate(
     eligible = ifelse(itt_group == "Non-LTFU" | tx_duration_yrs >= start_yrs, 1, 0)
   ) %>% filter(eligible == 1) %>%
   mutate(
     expose = ifelse(itt_group == "Loss to follow-up" & tx_duration_yrs >= start_yrs & tx_duration_yrs < end_yrs, 1, 0),
-    time_followup = time_d - start_yrs,
+    time_followup = time_d_tx - start_yrs,
     event_d = ifelse(time_followup > 2.0, 0, event_d),
     time_followup = ifelse(time_followup > 2.0, 2.0, time_followup)
   )

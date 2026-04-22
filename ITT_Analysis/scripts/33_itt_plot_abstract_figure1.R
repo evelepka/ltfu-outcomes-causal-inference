@@ -16,7 +16,7 @@ library(survival)
 
 cat("\n--- 1. Loading Data ---\n")
 df_cohort <- read.csv("ITT_Analysis/data/itt_cohort.csv", stringsAsFactors = FALSE)
-df_timing <- read.csv("ITT_Analysis/results/target_trial_6mo_array_hr.csv", stringsAsFactors = FALSE)
+df_timing <- read.csv("ITT_Analysis/results/target_trial_mi_6mo_array_hr.csv", stringsAsFactors = FALSE)
 df_sub <- read.csv("ITT_Analysis/results/target_trial_subgroup_interactions.csv", stringsAsFactors = FALSE)
 
 # Clean Timing Data
@@ -65,7 +65,7 @@ build_raincloud <- function(df, x_var, x_label, title_text, col_fill, x_limits, 
     )
 }
 
-pRain1 <- build_raincloud(df_ab, "abandon_months", "Months to Abandonment", "Timing of Abandonment", "#e74c3c", c(0, 6), seq(0, 6, 1))
+pRain1 <- build_raincloud(df_ab, "abandon_months", "Months to LTFU", "Timing of LTFU", "#e74c3c", c(0, 6), seq(0, 6, 1))
 pRain2 <- build_raincloud(df_rn, "time_rn", "Years to Retreatment", "Timing of Return to Care", "#f1c40f", c(0, 12), seq(0, 12, 2))
 pRain3 <- build_raincloud(df_d, "time_d", "Years to Death", "Timing of Mortality", "#2c3e50", c(0, 12), seq(0, 12, 2))
 
@@ -104,11 +104,11 @@ pB <- ggplot(df_km, aes(x = time, y = cum_mort, color = group, linetype = group)
   scale_y_continuous(labels = scales::percent, limits = c(0, max(df_km$cum_mort) * 1.1)) +
   scale_x_continuous(breaks = 0:5, limits = c(0, 5)) +
   scale_color_manual(values=c("Overall LTFU Cohort" = "black", "People living with HIV" = "#e74c3c", "People experiencing homelessness" = "#3498db")) +
-  scale_linetype_manual(values=c("solid", "dashed", "dotdash")) +
+  scale_linetype_manual(values=c("solid", "solid", "solid")) +
   labs(
     title = "B: Cumulative Risk of Mortality",
-    subtitle = "Survival post-abandonment (up to 5 years)",
-    x = "Years from Abandonment",
+    subtitle = "Mortality post-LTFU (up to 5 years)",
+    x = "Years from LTFU",
     y = "Cumulative Mortality",
     color = "", linetype = ""
   ) +
@@ -127,12 +127,12 @@ pC <- ggplot(df_timing, aes(x = Month_Num, y = HR)) +
   geom_errorbar(aes(ymin = CI_Lower, ymax = CI_Upper), width = 0.1, color = "#2c3e50", linewidth=0.8) +
   geom_line(color = "#34495e", linewidth = 1, alpha = 0.5) +
   geom_point(size = 4, color = "#e74c3c") +
-  scale_y_continuous(limits = c(0.8, 5.0), breaks = seq(1, 5, 1)) +
+  scale_y_continuous(limits = c(0.5, 2.5), breaks = seq(0.5, 2.5, 0.5)) +
   scale_x_continuous(breaks = 1:6, labels = paste("Month", 1:6)) +
   labs(
-    title = "C: Penalty by Month of Abandonment",
+    title = "C: Mortality Hazard by Month of LTFU",
     subtitle = "Sequential Target Trial Hazard Ratios",
-    x = "Exact Month of Treatment Abandonment",
+    x = "Exact Month of LTFU",
     y = "Adjusted Hazard Ratio (aHR)"
   ) +
   theme_minimal(base_size = 14) +
@@ -146,13 +146,13 @@ pC <- ggplot(df_timing, aes(x = Month_Num, y = HR)) +
 cat("\n--- 5. Generating Panel D: Subgroups (Forest Plot) ---\n")
 pD <- ggplot(df_sub, aes(x = HR, y = Level, color = Subgroup)) +
   geom_vline(xintercept = 1, linetype = "dashed", color = "black", linewidth = 0.5) +
-  geom_errorbar(aes(xmin = CI_L, xmax = CI_H), width = 0.2, linewidth=0.8) +
+  geom_errorbar(aes(xmin = CI_Lower, xmax = CI_Upper), width = 0.2, linewidth=0.8) +
   geom_point(size = 4) +
   facet_grid(Plot_Group ~ ., scales = "free_y", space = "free_y", switch="y") +
   scale_x_continuous(limits = c(0.8, 5.0), breaks = seq(1, 5, 1)) +
   scale_color_manual(values = c("Age Group" = "#3498db", "Homelessness" = "#e67e22", "Sex" = "#9b59b6", "HIV/AIDS" = "#1abc9c")) +
   labs(
-    title = "D: Competing Risks Modification",
+    title = "D: Mortality Risk by Subgroup",
     subtitle = "Target Trial Interactions",
     x = "Adjusted Hazard Ratio (aHR)",
     y = ""
@@ -160,6 +160,7 @@ pD <- ggplot(df_sub, aes(x = HR, y = Level, color = Subgroup)) +
   theme_minimal(base_size = 14) +
   theme(
     plot.title = element_text(face = "bold", size = 16),
+    plot.title.position = "plot",
     legend.position = "none",
     strip.placement = "outside",
     strip.text.y.left = element_text(angle = 0, face = "bold", hjust=1),
@@ -175,12 +176,11 @@ final_plot <- arrangeGrob(pA, pB, pC, pD, ncol=2, nrow=2, heights = c(1, 1), wid
 # Dynamic timestamped filename
 ts <- as.numeric(Sys.time())
 fname <- sprintf("figure1_target_trials_%.0f.png", ts)
-artifact_dir <- "/Users/jasonandrews/.gemini/antigravity/brain/c053ef30-5842-41b7-b342-bf735650d865"
+artifact_dir <- "/tmp"
 out_path_repo <- file.path("ITT_Analysis/results", fname)
 out_path_artifact <- file.path(artifact_dir, fname)
 
 ggsave(out_path_repo, plot = final_plot, width = 16, height = 12, dpi = 300, bg="white")
-ggsave(out_path_artifact, plot = final_plot, width = 16, height = 12, dpi = 300, bg="white")
 
 cat("\n--- 7. Updating Walkthrough Cache ---\n")
 walkthrough_path <- file.path(artifact_dir, "walkthrough.md")

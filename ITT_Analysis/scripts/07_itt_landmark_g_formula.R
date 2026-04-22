@@ -16,7 +16,7 @@ library(splines)
 
 # 1. Load Data
 cat("Loading ITT cohort for Landmark Analysis...\n")
-df <- read.csv("Abandonment Paper/ITT_Analysis/data/itt_cohort.csv", stringsAsFactors = FALSE)
+df <- read.csv("ITT_Analysis/data/itt_cohort.csv", stringsAsFactors = FALSE)
 
 # Harmonized Recoding
 clean_data <- function(data) {
@@ -67,8 +67,8 @@ cat("Running Landmark G-formula for 12-year Mortality...\n")
 df_c <- clean_data(df_landmark) %>% na.omit()
 cat("N after cleaning/NA removal:", nrow(df_c), "\n")
 
-# USE time_d (time from end_date) instead of time_d_tx (time from tx_start)
-df_long <- prepare_long(df_c, "time_d", "event_d")
+# USE time_d_tx (time from tx_start) instead of time_d
+df_long <- prepare_long(df_lm, "time_followup", "event_d")
 
 fit_death <- glm(
   death ~ itt_group * ns(month, df = 3) + age_group + sex + race_clean +
@@ -97,9 +97,9 @@ simulate_survival <- function(model, baseline_data, target_group) {
 }
 
 cat("Simulating Non-LTFU...\n")
-curve_non <- simulate_survival(fit_death, df_c, "Non-LTFU")
+curve_non <- simulate_survival(fit_death, df_lm, "Non-LTFU")
 cat("Simulating Loss to follow-up...\n")
-curve_aba <- simulate_survival(fit_death, df_c, "Loss to follow-up")
+curve_aba <- simulate_survival(fit_death, df_lm, "Loss to follow-up")
 
 # 4. Results at Milestones
 milestones <- c(12, 60, 120, 144)
@@ -119,7 +119,7 @@ res_g <- data.frame(
 print(res_g)
 
 # 6. Save results
-write.csv(res_g, "Abandonment Paper/ITT_Analysis/results/g_formula_mortality_landmark_results.csv", row.names = FALSE)
+write.csv(res_g, "ITT_Analysis/results/g_formula_landmark_m2_results.csv", row.names = FALSE)
 
 # 5. Plot (Standardized ggplot2)
 cat("Generating Standardized Plot...\n")
@@ -149,6 +149,8 @@ p <- ggplot(plot_df, aes(x = Year, y = mortality, color = group)) +
         plot.title = element_text(face = "bold", size = 14),
         axis.title = element_text(size = 12))
 
-ggsave("Abandonment Paper/ITT_Analysis/results/g_formula_mortality_landmark.png", p, width = 8, height = 6, dpi = 300)
+png("ITT_Analysis/results/g_formula_landmark_m2.png", width = 2400, height = 1800, res = 300)
+print(p)
+dev.off()
 
 cat("ITT 12-Year Landmark Mortality G-Formula complete.\n")

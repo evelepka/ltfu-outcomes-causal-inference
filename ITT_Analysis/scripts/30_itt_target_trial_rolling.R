@@ -40,7 +40,7 @@ for (m in 1:6) {
   end_yrs   <- end_days / 365.25
   
   # Eligibility: Alive and still on treatment at 'start' 
-  df_trial <- df_c %>% filter(time_d > start_yrs) %>%
+  df_trial <- df_c %>% filter(time_d_tx > start_yrs) %>%
     mutate(
       eligible = ifelse(itt_group == "Non-LTFU" | tx_duration_yrs >= start_yrs, 1, 0)
     ) %>% filter(eligible == 1) %>%
@@ -48,7 +48,7 @@ for (m in 1:6) {
       # Exposed: Abandoned between 'start' and 'end'
       expose = ifelse(itt_group == "Loss to follow-up" & tx_duration_yrs >= start_yrs & tx_duration_yrs < end_yrs, 1, 0),
       trial_month = paste0("Month_", m),
-      time_followup = time_d - start_yrs,
+      time_followup = time_d_tx - start_yrs,
       event_d = ifelse(time_followup > 2.0, 0, event_d),
       time_followup = ifelse(time_followup > 2.0, 2.0, time_followup)
     )
@@ -57,21 +57,32 @@ for (m in 1:6) {
   cat(sprintf("Trial %d (Days %d-%d) | N = %d\n", m, start_days, end_days, nrow(df_trial)))
 }
 
-cat("\n--- 3. Pooling Trials and Fitting Model ---\n")
-df_pooled <- bind_rows(trial_list)
-df_pooled$trial_month <- factor(df_pooled$trial_month, levels = paste0("Month_", 1:6))
+cat("\n--- 3. Fitting Independent Target Trials ---\n")
+results <- list()
 
-# Fitting model with robust standard errors clustered by individual 
-# because patients can appear in multiple consecutive trials (controls).
-fit <- coxph(
-  Surv(time_followup, event_d) ~ expose * trial_month + age_group + sex + race_clean +
-    edu_clean + hiv_aids + diabetes + alcohol + drug_use +
-    incarcerated + homelessness + hosp_admission + clinical_clean + dot_status,
-  data = df_pooled, cluster = sinan_clean
-)
+for (m in 1:6) {
+  df_trial <- trial_list[[m]]
+  # Calculate exact target trial HR independently to guarantee exact 95% CIs
+  fit <- coxph(
+    Surv(time_followup, event_d) ~ expose + age_group + sex + race_clean +
+      edu_clean + hiv_aids + diabetes + alcohol + drug_use +
+      incarcerated + homelessness + hosp_admission + clinical_clean + dot_status,
+    data = df_trial
+  )
+  
+  res <- tidy(fit, exponentiate = TRUE, conf.int = TRUE) %>% filter(term == "expose")
+  
+  results[[m]] <- data.frame(
+    Trial_Month = paste0("Month_", m),
+    HR = res$estimate,
+    CI_Lower = res$conf.low,
+    CI_Upper = res$conf.high,
+    P_Value = res$p.value
+  )
+}
 
-res <- tidy(fit, exponentiate = TRUE, conf.int = TRUE) %>% filter(grepl("expose", term))
-print(res %>% select(term, estimate, p.value, conf.low, conf.high))
+final_results <- bind_rows(results)
+print(final_results)
 
-write.csv(res, "ITT_Analysis/results/target_trial_6mo_array_hr.csv", row.names=FALSE)
+write.csv(final_results, "ITT_Analysis/results/target_trial_6mo_array_hr.csv", row.names=FALSE)
 cat("Results saved to ITT_Analysis/results/target_trial_6mo_array_hr.csv\n")

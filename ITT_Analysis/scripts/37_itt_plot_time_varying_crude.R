@@ -21,32 +21,32 @@ df$date_end <- as.Date(df$end_date)
 df$tx_dur <- as.numeric(difftime(df$date_end, df$date_start, units="days")) / 365.25
 
 # Standardize Follow-up Horizon (2 Years)
-df$event_d <- ifelse(df$time_d > 2.0, 0, df$event_d)
-df$time_d <- ifelse(df$time_d > 2.0, 2.0, df$time_d)
+df$event_d <- ifelse(df$time_d_tx > 2.0, 0, df$event_d)
+df$time_d_tx <- ifelse(df$time_d_tx > 2.0, 2.0, df$time_d_tx)
 
 cat("\n--- 2. Building Counting Process Data (tstart, tstop) ---\n")
 # Everyone starts in Maintained Care!
 df_p1 <- df
 df_p1$tstart <- 0
 # They remain in Maintained Care until the end of follow-up, OR until the day they abandon
-df_p1$tstop <- ifelse(df_p1$itt_group == "Loss to follow-up" & df_p1$tx_dur < df_p1$time_d, 
-                      df_p1$tx_dur, df_p1$time_d)
+df_p1$tstop <- ifelse(df_p1$itt_group == "Loss to follow-up" & df_p1$tx_dur < df_p1$time_d_tx, 
+                      df_p1$tx_dur, df_p1$time_d_tx)
 # If they drop out, they DO NOT die in Maintained Care (event=0 for this interval)
-df_p1$event <- ifelse(df_p1$itt_group == "Loss to follow-up" & df_p1$tx_dur < df_p1$time_d, 
+df_p1$event <- ifelse(df_p1$itt_group == "Loss to follow-up" & df_p1$tx_dur < df_p1$time_d_tx, 
                       0, df_p1$event_d)
 df_p1$group <- "Maintained Care (On Treatment or Completed)"
 
 
 # For those who abandon, they spawn a second observation row starting at abandonment!
-df_p2 <- df[df$itt_group == "Loss to follow-up" & df$tx_dur < df$time_d, ]
+df_p2 <- df[df$itt_group == "Loss to follow-up" & df$tx_dur < df$time_d_tx, ]
 df_p2$tstart <- df_p2$tx_dur
 # They remain in the Abandoned state until the end of follow-up
-df_p2$tstop <- df_p2$time_d
+df_p2$tstop <- df_p2$time_d_tx
 df_p2$event <- df_p2$event_d
 df_p2$group <- "Abandoned Treatment"
 
 # Bind and throw away any logical noise (0 time intervals)
-df_split <- bind_rows(df_p1, df_p2) %>% filter(tstop > tstart)
+df_split <- bind_rows(df_p1, df_p2) %>% filter(round(tstop - tstart, 4) > 0)
 
 cat("\n--- 3. Fitting Time-Varying Nelson Aalen Estimator ---\n")
 # By using tstart, tstop we correctly dynamically assign person-time

@@ -15,7 +15,7 @@ library(splines)
 
 # 1. Load Data
 cat("Loading ITT cohort...\n")
-df <- read.csv("Abandonment Paper/ITT_Analysis/data/itt_cohort.csv", stringsAsFactors = FALSE)
+df <- read.csv("ITT_Analysis/data/itt_cohort.csv", stringsAsFactors = FALSE)
 
 # Harmonized Recoding
 clean_data <- function(data) {
@@ -109,7 +109,7 @@ res_g <- data.frame(
 print(res_g)
 
 # Save
-write.csv(res_g, "Abandonment Paper/ITT_Analysis/results/g_formula_mortality_12y_results.csv", row.names = FALSE)
+write.csv(res_g, "ITT_Analysis/results/g_formula_mortality_12y_results.csv", row.names = FALSE)
 
 # 5. Plot (Standardized ggplot2)
 cat("Generating Standardized Plot...\n")
@@ -123,7 +123,7 @@ plot_df <- data.frame(
 ) %>%
 pivot_longer(cols = c(Non_LTFU, LTFU), names_to = "group", values_to = "mortality")
 
-png("Abandonment Paper/ITT_Analysis/results/g_formula_mortality_12y.png", width = 2400, height = 1800, res = 300)
+png("ITT_Analysis/results/g_formula_mortality_12y.png", width = 2400, height = 1800, res = 300)
 ggplot(plot_df, aes(x = Year, y = mortality, color = group)) +
   geom_line(linewidth = 1.2) +
   theme_classic() +
