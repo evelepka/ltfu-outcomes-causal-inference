@@ -126,16 +126,17 @@ panelB <- pR1 / pR2 / pR3 +
                                                            size = 13)))
 
 # ---------------------------------------------------------------------------
-# Compose — A on top (alluvial, wider), B triptych below
+# Compose — A on left (alluvial, wider ~1.2:1 aspect), B three rainclouds
+# stacked vertically on the right
 # ---------------------------------------------------------------------------
-fig1 <- pA / (pR1 | pR2 | pR3) +
-  plot_layout(heights = c(1.2, 1)) +
+fig1 <- pA | (pR1 / pR2 / pR3) +
+  plot_layout(widths = c(1.3, 1)) +
   plot_annotation(
     theme = theme(plot.background = element_rect(fill = "white", color = NA))
   )
 
-ggsave(OUT_PNG, fig1, width = 16, height = 10, dpi = 300, bg = "white")
-ggsave(OUT_PDF, fig1, width = 16, height = 10, bg = "white")
+ggsave(OUT_PNG, fig1, width = 18, height = 10, dpi = 300, bg = "white")
+ggsave(OUT_PDF, fig1, width = 18, height = 10, bg = "white")
 cat(sprintf("[fig1] Wrote %s\n", OUT_PNG))
 cat(sprintf("[fig1] Wrote %s\n", OUT_PDF))
 
