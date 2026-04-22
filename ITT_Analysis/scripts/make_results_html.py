@@ -75,7 +75,7 @@ N_nonltfu = itt_counts.get("Non-LTFU", 0)
 flowchart = read_csv_safe(DATA / "exclusion_flowchart.csv")
 fig1_stats = read_csv_safe(RESULTS / "Figure_1_caption_stats.csv")
 fig2_vals = read_csv_safe(RESULTS / "Figure_2_cif_values_24mo.csv")
-tt_array = read_csv_safe(RESULTS / "target_trial_mi_6mo_array_hr.csv")
+tt_array_el = read_csv_safe(RESULTS / "target_trial_mi_early_late_array.csv")
 tt_subgroups = read_csv_safe(RESULTS / "target_trial_subgroup_interactions_mi.csv")
 mi_cc = read_csv_safe(RESULTS / "multivariable_results_mi_cc.csv")
 
@@ -92,27 +92,37 @@ if fig2_vals is not None:
 else:
     fig2_vals_fmt = None
 
-if tt_array is not None:
-    tt_array_fmt = tt_array.copy()
-    tt_array_fmt["HR (95% CI)"] = tt_array_fmt.apply(
-        lambda r: f"{r['HR']:.2f} ({r['CI_Lower']:.2f}–{r['CI_Upper']:.2f})", axis=1
+def _fmt_hr(df):
+    d = df.copy()
+    d["HR (95% CI)"] = d.apply(
+        lambda r: f"{r['HR']:.2f} ({r['CI_L']:.2f}–{r['CI_H']:.2f})", axis=1
     )
-    tt_array_fmt["p-value"] = tt_array_fmt["P_Value"].apply(
+    d["p-value"] = d["P_Value"].apply(
         lambda p: "<0.001" if p < 0.001 else f"{p:.3f}"
     )
-    tt_array_fmt = tt_array_fmt[["Trial_Month", "HR (95% CI)", "p-value"]]
+    return d
+
+
+if tt_array_el is not None:
+    wide = tt_array_el.copy()
+    wide["label"] = wide.apply(
+        lambda r: f"{r['model']} (cap {r['cap']:g}y)", axis=1
+    )
+    wide["HR (95% CI)"] = wide.apply(
+        lambda r: f"{r['HR']:.2f} ({r['CI_L']:.2f}–{r['CI_H']:.2f})", axis=1
+    )
+    tt_array_fmt = wide.pivot_table(
+        index="Trial_Month", columns="label", values="HR (95% CI)", aggfunc="first"
+    ).reset_index()
 else:
     tt_array_fmt = None
 
 if tt_subgroups is not None:
-    tt_sub_fmt = tt_subgroups.copy()
-    tt_sub_fmt["HR (95% CI)"] = tt_sub_fmt.apply(
-        lambda r: f"{r['HR']:.2f} ({r['CI_L']:.2f}–{r['CI_H']:.2f})", axis=1
+    tt_sub_fmt = _fmt_hr(tt_subgroups)
+    tt_sub_fmt["window"] = tt_sub_fmt.apply(
+        lambda r: f"{r['model']} (cap {r['cap']:g}y)", axis=1
     )
-    tt_sub_fmt["p-value"] = tt_sub_fmt["P_Value"].apply(
-        lambda p: "<0.001" if p < 0.001 else f"{p:.3f}"
-    )
-    tt_sub_fmt = tt_sub_fmt[["Subgroup", "Level", "HR (95% CI)", "p-value", "N_Imp"]]
+    tt_sub_fmt = tt_sub_fmt[["Subgroup", "Level", "window", "HR (95% CI)", "p-value", "N_imp"]]
 else:
     tt_sub_fmt = None
 
