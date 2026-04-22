@@ -106,7 +106,7 @@ pB <- make_panel(
   palette = c("< 2 months" = "#e41a1c",
               "2 to <4 months" = "#ff7f00",
               "≥ 4 months" = "#377eb8"),
-  legend_title = "Month of abandonment", subtitle = "B. Month of abandonment",
+  legend_title = "Month of LTFU", subtitle = "B. Month of LTFU",
   pval_text = gray_p(cif_tim),
   group_order = c("< 2 months", "2 to <4 months", "≥ 4 months")
 )
