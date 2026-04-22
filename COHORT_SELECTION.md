@@ -230,16 +230,14 @@ Files previously present that have been deleted (2026-04-22):
 
 ## 11. Known caveats / next investigations
 
-- **21-row discrepancy**: The pre-2026-04-22 cohort had 21,640 LTFU; the refreshed
-  cohort has 21,619. The 21-individual difference likely traces to subtle
-  ordering effects in the `groupby().first()` on `first_novo`, possibly
-  interacting with the bacteriological covariate additions. Not expected to
-  change any published estimate materially, but worth verifying if a figure
-  moves.
-- **Date-generator flowchart vs. pre-2026-04-22 flowchart**: The historical
-  `exclusion_flowchart.csv` started from 38,423 (abandonment-only). The new
-  auto-generated flowchart starts from 198,409 (all Novo episodes). These are
-  counting different things — the new one is more comprehensive.
+- **"21,640" figure elsewhere is NOT the ITT LTFU count.** Older files in
+  `Data/` (`analysis_ready_cohort.csv`, the now-deleted
+  `analysis_cohort_21640.csv`, the historical `exclusion_flowchart.csv`)
+  reference N=21,640. That was the N of an *LTFU-only* cohort constructed
+  under pre-ITT logic (the old flowchart started from 38,423 abandonment
+  records, not 198,409 Novo episodes). The current ITT cohort has 21,619
+  LTFU within a total of 172,463, which matches the headline numbers in
+  `README.md`. No drift.
 - **R script working-directory inconsistency**: Some R scripts read
   `"ITT_Analysis/data/itt_cohort.csv"`, others read
   `"Abandonment Paper/ITT_Analysis/data/itt_cohort.csv"`. Both work if the
