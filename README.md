@@ -18,29 +18,39 @@ Historically, evaluating the mortality impact of TB treatment abandonment is con
 
 ## Repository Structure
 
-The full codebase bridges initial Python-based geographic forecasting with rigorous R-based causal survival modeling.
-
 ```
-├── ITT_Analysis/
+├── ITT_Analysis/                                # Authoritative causal pipeline
 │   ├── scripts/
-│   │   ├── 01_itt_cohort_selection.py           # Cohort harmonization
-│   │   ├── 05_itt_g_formula_analysis.R          # Parametric G-Computation
-│   │   ├── 24_itt_ltfu_msm_ipw.R                # Retreatment Marginal Structural Models
-│   │   ├── 30_itt_target_trial_rolling.R        # Sequential Month-by-Month Emulation
-│   │   └── 31_itt_ltfu_subgroup_interactions.R  # Effect modification & Competing risks
-│   └── results/                                 # Walkthrough PDFs, KM datasets, and Figures
-├── 00_clean_sinan.py                            # Legacy ID cleaning and harmonization
-├── 04_abandonment_full_analysis.py              # Legacy raw survival outputs
-└── METHODS.md                                   # Legacy description
+│   │   ├── 01_itt_cohort_selection.py           # Cohort builder → itt_cohort.csv (single source of truth)
+│   │   ├── 03_itt_multiple_imputation_models.R  # MI for LTFU subgroup
+│   │   ├── 05_itt_g_formula_analysis.R          # Parametric G-computation
+│   │   ├── 14_itt_landmark_mortality_analysis.R # Landmark survival (post-treatment)
+│   │   ├── 24_itt_ltfu_msm_ipw.R                # Retreatment MSM-IPW
+│   │   ├── 30-41_itt_target_trial_*.R           # Sequential & piecewise target trials, RMST, subgroups
+│   │   └── 33-37_itt_plot_*.R                   # Main paper figures
+│   ├── results/                                 # Walkthrough PDFs, KM datasets, figures
+│   └── Master_Causal_Analysis/                  # Data dictionary (PT) + working docs
+├── 00_clean_sinan.py                            # SINAN ID cleaning → Final_table_cleaned.csv
+├── COHORT_SELECTION.md                          # Technical cohort documentation
+├── CLAUDE.md                                    # Guidance for agents/collaborators
+├── legacy/                                      # Pre-ITT crude analysis (do not run)
+└── README.md                                    # This file
 ```
+
+Data lives in Google Drive at `~/Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/My Drive/Abandonment Paper/` — never committed to git. See `COHORT_SELECTION.md` for paths and the cohort-regeneration workflow.
+
+## Documentation
+- `COHORT_SELECTION.md` — cohort definition, inclusion/exclusion, time variables, and regeneration workflow
+- `CLAUDE.md` — agent / collaborator guidance (where data lives, common pitfalls, what not to do)
+- `ITT_Analysis/README_FINAL.md` — pipeline-level README
 
 ## Abstract Synthesis
 For a complete, print-ready synthesis of the advanced causal findings, please see `ITT_Analysis/results/causal_analysis_summary.pdf`.
 
 ## Dependencies
 - **R**: `survival`, `dplyr`, `broom`, `survivalROC`
-- **Python >= 3.9**: `pandas`, `numpy`, `matplotlib`
+- **Python >= 3.9**: `pandas`, `numpy`, `matplotlib`, `python-docx`
 
 ## Citation / Contact
-Evelyn Lepka de Lima and Jason Andrews  
+Evelyn Lepka de Lima and Jason Andrews
 Analysis finalized April 2026.

@@ -1,15 +1,47 @@
 import pandas as pd
 import numpy as np
 import os
+from pathlib import Path
 from docx import Document
 
-# Paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-FINAL_DATA = os.path.join(BASE_DIR, "Data/Final_table_cleaned.csv")
-OUT_CSV = os.path.join(BASE_DIR, "ITT_Analysis/data/itt_cohort.csv")
-OUT_DOC = os.path.join(BASE_DIR, "ITT_Analysis/results/Inclusion_Exclusion_ITT.docx")
+# ----------------------------------------------------------------------------
+# Project root resolution
+# ----------------------------------------------------------------------------
+# The raw SINAN data and cohort outputs live in Google Drive, not in git.
+# Resolve in this order:
+#   1. TB_ABANDONMENT_ROOT environment variable (set this for non-standard setups)
+#   2. Known Google Drive mounts for current collaborators
+#   3. Script-relative fallback (script_dir/../.. -> works if Data/ is co-located)
+def _find_project_root():
+    if os.environ.get("TB_ABANDONMENT_ROOT"):
+        p = Path(os.environ["TB_ABANDONMENT_ROOT"]).expanduser()
+        if p.exists():
+            return p
+    candidates = [
+        Path.home() / "Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/My Drive/Abandonment Paper",
+        Path.home() / "Library/CloudStorage/GoogleDrive-evelynlepka@gmail.com/My Drive/Abandonment Outcomes/Abandonment Paper",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    # Last resort: repo-relative (only works if Data/ is co-located with ITT_Analysis/)
+    return Path(__file__).resolve().parents[2]
+
+BASE_DIR = _find_project_root()
+FINAL_DATA = BASE_DIR / "Data" / "Final_table_cleaned.csv"
+OUT_CSV = BASE_DIR / "ITT_Analysis" / "data" / "itt_cohort.csv"
+OUT_DOC = BASE_DIR / "ITT_Analysis" / "results" / "Inclusion_Exclusion_ITT.docx"
+OUT_FLOWCHART = BASE_DIR / "Data" / "exclusion_flowchart.csv"
+
+OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
+OUT_DOC.parent.mkdir(parents=True, exist_ok=True)
 
 print(f"Base Dir: {BASE_DIR}")
+if not FINAL_DATA.exists():
+    raise FileNotFoundError(
+        f"Final_table_cleaned.csv not found at {FINAL_DATA}. "
+        f"Set TB_ABANDONMENT_ROOT or mount Google Drive."
+    )
 
 # 1. Load the full dataset
 print("Loading cleaned dataset...")
@@ -237,6 +269,18 @@ keep_cols = ["sinan_clean", "age_tb", "age_group", "sex", "race_clean", "edu_cle
 itt_cohort[keep_cols].to_csv(OUT_CSV, index=False)
 print(f"Saved optimized final ITT cohort to {OUT_CSV}")
 
+# Build flowchart rows (step, n_remaining, n_excluded)
+flow_rows = []
+prev_n = None
+for label, n in attrition:
+    excluded = "" if prev_n is None else prev_n - n
+    flow_rows.append({"step": label, "n_remaining": n, "n_excluded": excluded})
+    prev_n = n
+
+# Save exclusion flowchart as CSV (authoritative — regenerated on every run)
+pd.DataFrame(flow_rows).to_csv(OUT_FLOWCHART, index=False)
+print(f"Saved exclusion flowchart to {OUT_FLOWCHART}")
+
 # Save Inclusion Doc
 doc = Document()
 doc.add_heading("Table 1/2 Cohort: Inclusion/Exclusion Flow (Mirrored Strict ITT)", 0)
@@ -247,12 +291,10 @@ hdr = table.rows[0].cells
 hdr[0].text = "Step"
 hdr[1].text = "N Remaining"
 hdr[2].text = "Excluded"
-prev_n = None
-for label, n in attrition:
+for row_data in flow_rows:
     row = table.add_row().cells
-    row[0].text = label
-    row[1].text = f"{n:,}"
-    if prev_n is not None: row[2].text = f"{prev_n - n:,}"
-    else: row[2].text = "-"
-    prev_n = n
+    row[0].text = row_data["step"]
+    row[1].text = f"{row_data['n_remaining']:,}"
+    row[2].text = "-" if row_data["n_excluded"] == "" else f"{row_data['n_excluded']:,}"
 doc.save(OUT_DOC)
+print(f"Saved inclusion/exclusion docx to {OUT_DOC}")
