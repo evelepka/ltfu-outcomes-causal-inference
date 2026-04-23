@@ -331,7 +331,6 @@ html = f"""<!doctype html>
 {section("Figure 1 — Descriptive", "fig1", f'''
 <figure>
   <img src="{fig1_src}" alt="Figure 1">
-  <figcaption>Figure 1. A — Clinical flow after loss to follow-up. B — Event-timing rainclouds.</figcaption>
 </figure>
 <h3>Summary statistics</h3>
 {df_to_html(fig1_stats)}
@@ -340,7 +339,6 @@ html = f"""<!doctype html>
 {section("Figure 2 — Stratified cumulative incidence of retreatment (24 months)", "fig2", f'''
 <figure>
   <img src="{fig2_src}" alt="Figure 2">
-  <figcaption>Figure 2. Cumulative incidence of retreatment after abandonment, up to 24 months. Aalen–Johansen estimates treating death as a competing risk. Gray's test p-values annotated on each panel.</figcaption>
 </figure>
 <h3>Cumulative incidence values by horizon (%)</h3>
 {df_to_html(fig2_vals_fmt)}

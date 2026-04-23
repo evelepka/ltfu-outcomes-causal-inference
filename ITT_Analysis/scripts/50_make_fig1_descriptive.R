@@ -54,8 +54,8 @@ pA <- ggplot() +
                                height = unit(1, "npc")),
                     xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
   theme_void() +
-  labs(title = "A. TB trajectories after loss to follow-up") +
-  theme(plot.title = element_text(face = "bold", size = 13,
+  labs(title = "A. TB trajectories after LTFU") +
+  theme(plot.title = element_text(face = "bold", size = 15,
                                   margin = margin(b = 4)))
 
 # Still compute caption stats for the side CSV
@@ -93,11 +93,11 @@ build_raincloud <- function(df, x_var, x_label, title_text, fill_color,
     annotate("text",
              x = med_val, y = max_d * 1.05,
              label = sprintf("median = %.2f%s", med_val, median_suffix),
-             hjust = -0.05, size = 3.2, fontface = "italic") +
+             hjust = -0.05, size = 4.0, fontface = "italic") +
     scale_x_continuous(limits = x_limits, breaks = x_breaks) +
     labs(title = title_text, x = x_label, y = NULL) +
-    theme_minimal(base_size = 11) +
-    theme(plot.title = element_text(face = "bold", size = 11),
+    theme_minimal(base_size = 13) +
+    theme(plot.title = element_text(face = "bold", size = 13),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           panel.grid.minor = element_blank(),
@@ -106,24 +106,19 @@ build_raincloud <- function(df, x_var, x_label, title_text, fill_color,
 
 pR1 <- build_raincloud(df_aband, "abandon_months",
                        "Months from treatment start",
-                       sprintf("B.i  Timing of loss to follow-up (N = %s)",
+                       sprintf("B. Timing of LTFU (N = %s)",
                                scales::comma(nrow(df_aband))),
-                       "#e74c3c", c(0, 6), 0:6, " mo")
+                       "#e74c3c", c(0, 6), 0:6, " months")
 pR2 <- build_raincloud(df_retx, "time_rn",
                        "Years since LTFU",
-                       sprintf("B.ii  Time to retreatment (N = %s)",
+                       sprintf("C. Time to retreatment (N = %s)",
                                scales::comma(nrow(df_retx))),
-                       "#f1c40f", c(0, 12), seq(0, 12, 2), " yr")
+                       "#f1c40f", c(0, 12), seq(0, 12, 2), " years")
 pR3 <- build_raincloud(df_death, "time_d",
                        "Years since LTFU",
-                       sprintf("B.iii  Time to mortality (N = %s)",
+                       sprintf("D. Time to mortality (N = %s)",
                                scales::comma(nrow(df_death))),
-                       "#2c3e50", c(0, 12), seq(0, 12, 2), " yr")
-
-panelB <- pR1 / pR2 / pR3 +
-  plot_annotation(title = "B. Event timing among abandoners",
-                  theme = theme(plot.title = element_text(face = "bold",
-                                                           size = 13)))
+                       "#2c3e50", c(0, 12), seq(0, 12, 2), " years")
 
 # ---------------------------------------------------------------------------
 # Compose — A on left (alluvial, wider ~1.2:1 aspect), B three rainclouds

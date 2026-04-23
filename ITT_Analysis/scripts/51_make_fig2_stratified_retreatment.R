@@ -52,7 +52,7 @@ cif_plot_df <- function(cif_obj, group_levels) {
   }))
 }
 
-make_panel <- function(df_plot, palette, legend_title, subtitle, pval_text,
+make_panel <- function(df_plot, palette, legend_title, subtitle,
                        group_order = NULL) {
   if (!is.null(group_order)) {
     df_plot$group <- factor(df_plot$group, levels = group_order)
@@ -61,8 +61,6 @@ make_panel <- function(df_plot, palette, legend_title, subtitle, pval_text,
   }
   ggplot(df_plot, aes(x = time, y = est, color = group)) +
     geom_step(linewidth = 1.15) +
-    annotate("text", x = 0.05, y = 0.58, label = pval_text,
-             size = 3.5, hjust = 0, fontface = "italic") +
     scale_y_continuous(labels = percent_format(accuracy = 1),
                        limits = c(0, 0.60)) +
     scale_x_continuous(breaks = seq(0, HORIZON, by = 0.5),
@@ -70,17 +68,12 @@ make_panel <- function(df_plot, palette, legend_title, subtitle, pval_text,
                        limits = c(0, HORIZON)) +
     scale_color_manual(name = legend_title, values = palette) +
     labs(subtitle = subtitle,
-         x = "Months since loss to follow-up",
+         x = "Months since LTFU",
          y = "Cumulative incidence of retreatment") +
     theme_classic(base_size = 11) +
     theme(legend.position = "bottom",
           legend.title = element_text(face = "bold", size = 9),
           plot.subtitle = element_text(face = "bold", size = 11))
-}
-
-gray_p <- function(cif_obj) {
-  p <- cif_obj$Tests["1", "pv"]
-  if (p < 0.001) "Gray's test p < 0.001" else sprintf("Gray's test p = %.3f", p)
 }
 
 # --- A) HIV ----------------------------------------------------------------
@@ -90,7 +83,6 @@ pA <- make_panel(
   cif_plot_df(cif_hiv, unique(d_hiv$hiv_aids)),
   palette = c("Negative" = "#2c3e50", "Positive" = "#e74c3c"),
   legend_title = "HIV status", subtitle = "A. HIV status",
-  pval_text = gray_p(cif_hiv),
   group_order = c("Negative", "Positive")
 )
 
@@ -107,7 +99,6 @@ pB <- make_panel(
               "2 to <4 months" = "#ff7f00",
               "≥ 4 months" = "#377eb8"),
   legend_title = "Month of LTFU", subtitle = "B. Month of LTFU",
-  pval_text = gray_p(cif_tim),
   group_order = c("< 2 months", "2 to <4 months", "≥ 4 months")
 )
 
@@ -120,7 +111,6 @@ pC <- make_panel(
   palette = c("No" = "#2c3e50", "Yes" = "#e74c3c"),
   legend_title = "Homelessness",
   subtitle = "C. Homelessness",
-  pval_text = gray_p(cif_home),
   group_order = c("No", "Yes")
 )
 
@@ -133,19 +123,11 @@ pD <- make_panel(
   palette = c("No" = "#2c3e50", "Yes" = "#e74c3c"),
   legend_title = "Hospitalization at index",
   subtitle = "D. Hospitalization at index",
-  pval_text = gray_p(cif_hosp),
   group_order = c("No", "Yes")
 )
 
 # --- Compose ---------------------------------------------------------------
-fig2 <- (pA | pB) / (pC | pD) +
-  plot_annotation(
-    title = "Cumulative incidence of retreatment after loss to follow-up, by subgroup",
-    subtitle = sprintf("Aalen-Johansen estimates with death as competing risk; LTFU subgroup N = %d",
-                       nrow(ltfu)),
-    theme = theme(plot.title = element_text(face = "bold", size = 14),
-                  plot.subtitle = element_text(size = 11))
-  )
+fig2 <- (pA | pB) / (pC | pD)
 
 ggsave(OUT_PNG, fig2, width = 12, height = 10, dpi = 300, bg = "white")
 ggsave(OUT_PDF, fig2, width = 12, height = 10, bg = "white")
