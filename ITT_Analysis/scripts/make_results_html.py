@@ -84,6 +84,7 @@ mi_cc = read_csv_safe(RESULTS / "multivariable_results_mi_cc.csv")
 fig1_src = embed_png(RESULTS / "Figure_1_descriptive.png")
 fig2_src = embed_png(RESULTS / "Figure_2_stratified_retreatment_24mo.png")
 fig3_src = embed_png(RESULTS / "Figure_3_causal_mortality.png")
+fig4_src = embed_png(RESULTS / "Figure_4_within_ltfu_forest.png")
 
 # Quick summary stats for the top banner
 if fig2_vals is not None:
@@ -371,7 +372,8 @@ html = f"""<!doctype html>
   <a href="#fig1">Figure 1 — Descriptive</a>
   <a href="#fig2">Figure 2 — Retreatment</a>
   <a href="#fig3">Figure 3 — Mortality</a>
-  <a href="#mi">MI multivariable</a>
+  <a href="#fig4">Figure 4 — Within-LTFU multivariable</a>
+  <a href="#mi">Sensitivity tables</a>
 </nav>
 
 {section("Cohort & exclusion flowchart", "cohort",
@@ -413,14 +415,22 @@ html = f"""<!doctype html>
 </div>
 ''')}
 """ + section(
-    "Within-LTFU multivariable models (MI-pooled + complete-case sensitivity)",
+    "Figure 4 — Within-LTFU multivariable forest (MI-pooled)",
+    "fig4",
+    f'''
+<figure>
+  <img src="{fig4_src}" alt="Figure 4">
+</figure>
+<p class="note">Pooled Cox (mortality) and Fine–Gray (retreatment with death as competing risk) within the LTFU subgroup (N = 21,619). Imputation on the full cohort via <code>miceforest</code>; pooling via Rubin\'s rules. Rows grouped into demographic (age, race, education), psychosocial (homelessness, incarceration) and biomedical (everything else) characteristics.</p>
+'''
+) + section(
+    "Sensitivity — complete-case and unadjusted models",
     "mi",
-    '<p>Pooled Cox (mortality) and Fine–Gray (retreatment with death as competing risk) '
-    'within the LTFU subgroup (N = 21,619). Imputation on the full cohort via '
-    '<code>miceforest</code>; pooling via Rubin\'s rules in R.</p>\n'
+    '<p class="muted">For comparison with Figure 4 above: complete-case models (n≈11,864 after dropping incomplete records) and unadjusted bivariable models. Expand each to see the full term list.</p>\n'
     + "".join(
         f'<details><summary>{model} ({len(tbl)} terms)</summary>\n{df_to_html(tbl)}\n</details>'
         for model, tbl in sorted(mi_cc_panels.items())
+        if model not in ("Cox_Death_Adjusted_MI", "FG_Retr_Adjusted_MI")
     )
     if mi_cc_panels
     else '<p class="muted">(no MI results on disk yet)</p>'
