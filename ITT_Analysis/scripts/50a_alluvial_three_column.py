@@ -290,33 +290,18 @@ fig = go.Figure(go.Sankey(
     ),
 ))
 
-# Column headers
-headers = {
-    0: "Index LTFU",
-    1: "First Outcome After LTFU",
-    2: "Retreatment Episode Outcome",
-}
-annotations = [
-    dict(x=X_POSITIONS[c], y=1.06, xref="paper", yref="paper",
-         text=f"<b>{t}</b>", showarrow=False,
-         font=dict(size=16, color="#1a1a2e", family="Arial"),
-         xanchor="center", yanchor="bottom")
-    for c, t in headers.items()
-]
-
 fig.update_layout(
-    font=dict(size=14, family="Arial", color="#2c2c2c"),
+    font=dict(size=17, family="Arial", color="#2c2c2c"),
     paper_bgcolor="#ffffff",
     plot_bgcolor="#ffffff",
     height=1000, width=1100,
-    margin=dict(l=30, r=30, t=60, b=40),
-    annotations=annotations,
+    margin=dict(l=30, r=30, t=20, b=40),
 )
 
 fig.write_html(str(OUT_HTML), include_plotlyjs="cdn", full_html=True)
 print(f"\nWrote {OUT_HTML}")
 try:
-    fig.write_image(str(OUT_PNG), width=1100, height=1000, scale=2)
+    fig.write_image(str(OUT_PNG), width=1100, height=1000, scale=3)
     print(f"Wrote {OUT_PNG}")
 except Exception as e:
     print(f"PNG export skipped: {e}")
