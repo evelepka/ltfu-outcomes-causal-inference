@@ -58,7 +58,6 @@ TERM_MAP <- list(
   list(term = "age_group25-44",                                                group = "Demographic",  label = "Age: 25-44 years",         is_ref = FALSE),
   list(term = "age_group45-64",                                                group = "Demographic",  label = "Age: 45-64 years",         is_ref = FALSE),
   list(term = "age_group≥65",                                             group = "Demographic",  label = "Age: ≥65 years",           is_ref = FALSE),
-  list(term = "__ref_sex",                                                     group = "Demographic",  label = "Female",                   is_ref = TRUE),
   list(term = "sexMale",                                                       group = "Demographic",  label = "Male",                     is_ref = FALSE),
   list(term = "__ref_race",                                                    group = "Demographic",  label = "Race: White",              is_ref = TRUE),
   list(term = "race_cleanBlack or Mixed",                                      group = "Demographic",  label = "Race: Black or Mixed",     is_ref = FALSE),
@@ -119,15 +118,17 @@ common_strip <- theme(
 )
 
 ref_color <- "grey55"
+# Pre-compute per-row color vectors so the single geom layer can be styled
+# without splitting data (splitting breaks y-axis ordering in facets).
+cox$label_color <- ifelse(cox$is_ref, ref_color, "grey20")
+cox$hr_color    <- ifelse(cox$is_ref, ref_color, "grey25")
+fg$label_color  <- ifelse(fg$is_ref,  ref_color, "grey20")
+fg$hr_color     <- ifelse(fg$is_ref,  ref_color, "grey25")
 
 # 1. Labels panel (leftmost) — strip on left shows group names at top of group
 p_labels <- ggplot(cox, aes(y = Label)) +
-  geom_text(data = cox |> dplyr::filter(!is_ref),
-            aes(x = 0, label = Label),
-            hjust = 0, size = 3.8, color = "grey20", fontface = "plain") +
-  geom_text(data = cox |> dplyr::filter(is_ref),
-            aes(x = 0, label = Label),
-            hjust = 0, size = 3.8, color = ref_color, fontface = "italic") +
+  geom_text(aes(x = 0, label = Label),
+            hjust = 0, size = 3.8, color = cox$label_color) +
   scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
   facet_grid(rows = vars(Group), scales = "free_y", space = "free_y",
              switch = "y") +
@@ -146,12 +147,8 @@ p_labels <- ggplot(cox, aes(y = Label)) +
 
 # 2. Cox AHR text panel
 p_cox_text <- ggplot(cox, aes(y = Label)) +
-  geom_text(data = cox |> dplyr::filter(!is_ref),
-            aes(x = 0, label = hr_text),
-            hjust = 0.5, size = 3.4, color = "grey25", fontface = "plain") +
-  geom_text(data = cox |> dplyr::filter(is_ref),
-            aes(x = 0, label = hr_text),
-            hjust = 0.5, size = 3.4, color = ref_color, fontface = "italic") +
+  geom_text(aes(x = 0, label = hr_text),
+            hjust = 0.5, size = 3.4, color = cox$hr_color) +
   scale_x_continuous(limits = c(-1, 1), expand = c(0, 0)) +
   facet_grid(rows = vars(Group), scales = "free_y", space = "free_y") +
   labs(title = "AHR (95% CI)") +
@@ -165,24 +162,23 @@ p_cox_text <- ggplot(cox, aes(y = Label)) +
     plot.margin  = margin(5, 0, 5, 0)
   )
 
-# 3. Cox forest panel (refs rendered as a small dashed marker on x=1)
-cox_points <- cox |> dplyr::filter(!is_ref)
-p_cox_forest <- ggplot() +
+# 3. Cox forest panel. The base ggplot() uses the FULL cox data so the y-axis
+# is established from every row (ref rows included). na.rm = TRUE skips NA
+# HR/CI for refs. A small hollow diamond is overlaid on refs at x=1.
+p_cox_forest <- ggplot(cox, aes(y = Label)) +
   geom_vline(xintercept = 1, linetype = "dashed",
              linewidth = 0.5, color = "grey50") +
-  geom_errorbarh(data = cox_points,
-                 aes(xmin = CI_L, xmax = CI_H, y = Label),
-                 height = 0.28, linewidth = 0.7, color = "#2c3e50") +
-  geom_point(data = cox_points,
-             aes(x = HR, y = Label),
-             size = 2.8, color = "#2c3e50") +
-  geom_point(data = cox |> dplyr::filter(is_ref),
+  geom_errorbarh(aes(xmin = CI_L, xmax = CI_H, y = Label),
+                 height = 0.28, linewidth = 0.7, color = "#2c3e50",
+                 na.rm = TRUE) +
+  geom_point(aes(x = HR, y = Label),
+             size = 2.8, color = "#2c3e50", na.rm = TRUE) +
+  geom_point(data = cox[cox$is_ref, ],
              aes(x = 1, y = Label),
              shape = 23, size = 2.4, fill = "white", color = ref_color) +
   scale_x_log10(breaks = c(0.25, 0.5, 1, 2, 4),
                 minor_breaks = c(0.33, 0.75, 1.5, 3),
                 limits = c(0.2, 6)) +
-  scale_y_discrete(limits = levels(cox$Label)) +
   facet_grid(rows = vars(Group), scales = "free_y", space = "free_y") +
   labs(title = "A. Adjusted mortality HR",
        x = "AHR", y = NULL) +
@@ -202,12 +198,8 @@ p_cox_forest <- ggplot() +
 
 # 4. FG SHR text panel
 p_fg_text <- ggplot(fg, aes(y = Label)) +
-  geom_text(data = fg |> dplyr::filter(!is_ref),
-            aes(x = 0, label = hr_text),
-            hjust = 0.5, size = 3.4, color = "grey25", fontface = "plain") +
-  geom_text(data = fg |> dplyr::filter(is_ref),
-            aes(x = 0, label = hr_text),
-            hjust = 0.5, size = 3.4, color = ref_color, fontface = "italic") +
+  geom_text(aes(x = 0, label = hr_text),
+            hjust = 0.5, size = 3.4, color = fg$hr_color) +
   scale_x_continuous(limits = c(-1, 1), expand = c(0, 0)) +
   facet_grid(rows = vars(Group), scales = "free_y", space = "free_y") +
   labs(title = "SHR (95% CI)") +
@@ -222,23 +214,20 @@ p_fg_text <- ggplot(fg, aes(y = Label)) +
   )
 
 # 5. FG forest panel
-fg_points <- fg |> dplyr::filter(!is_ref)
-p_fg_forest <- ggplot() +
+p_fg_forest <- ggplot(fg, aes(y = Label)) +
   geom_vline(xintercept = 1, linetype = "dashed",
              linewidth = 0.5, color = "grey50") +
-  geom_errorbarh(data = fg_points,
-                 aes(xmin = CI_L, xmax = CI_H, y = Label),
-                 height = 0.28, linewidth = 0.7, color = "#b03a2e") +
-  geom_point(data = fg_points,
-             aes(x = HR, y = Label),
-             size = 2.8, color = "#b03a2e") +
-  geom_point(data = fg |> dplyr::filter(is_ref),
+  geom_errorbarh(aes(xmin = CI_L, xmax = CI_H, y = Label),
+                 height = 0.28, linewidth = 0.7, color = "#b03a2e",
+                 na.rm = TRUE) +
+  geom_point(aes(x = HR, y = Label),
+             size = 2.8, color = "#b03a2e", na.rm = TRUE) +
+  geom_point(data = fg[fg$is_ref, ],
              aes(x = 1, y = Label),
              shape = 23, size = 2.4, fill = "white", color = ref_color) +
   scale_x_log10(breaks = c(0.5, 1, 1.5, 2, 3),
                 minor_breaks = c(0.75, 1.25, 1.75, 2.5),
                 limits = c(0.5, 3.5)) +
-  scale_y_discrete(limits = levels(fg$Label)) +
   facet_grid(rows = vars(Group), scales = "free_y", space = "free_y") +
   labs(title = "B. Adjusted retreatment SHR",
        x = "SHR", y = NULL) +
