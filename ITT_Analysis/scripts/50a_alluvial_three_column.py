@@ -248,7 +248,7 @@ for col, lab in ALL_NODES_ORDERED:
         if col == 2:
             denom = node_size.get((1, "Retreatment"), TOTAL)
             pct2 = count / denom * 100 if denom else 0
-            node_labels.append(f"<b>{lab}</b> — {count:,} ({pct2:.1f}%)")
+            node_labels.append(f"<b>{lab}</b><br>{count:,} ({pct2:.1f}%)")
         elif col == 1:
             node_labels.append(f"<b>{lab}</b><br>{count:,} ({pct:.1f}%)")
         else:
@@ -291,7 +291,7 @@ fig = go.Figure(go.Sankey(
 ))
 
 fig.update_layout(
-    font=dict(size=17, family="Arial", color="#2c2c2c"),
+    font=dict(size=20, family="Arial", color="#2c2c2c"),
     paper_bgcolor="#ffffff",
     plot_bgcolor="#ffffff",
     height=1000, width=1100,

@@ -116,7 +116,7 @@ pR2 <- build_raincloud(df_retx, "time_rn",
                        "#f1c40f", c(0, 12), seq(0, 12, 2), " years")
 pR3 <- build_raincloud(df_death, "time_d",
                        "Years since LTFU",
-                       sprintf("D. Time to mortality (N = %s)",
+                       sprintf("D. Time to death (N = %s)",
                                scales::comma(nrow(df_death))),
                        "#2c3e50", c(0, 12), seq(0, 12, 2), " years")
 

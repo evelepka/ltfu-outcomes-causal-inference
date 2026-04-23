@@ -127,10 +127,10 @@ pA <- ggplot(hr_tbl, aes(x = month_mid, y = HR)) +
                 minor_breaks = c(0.33, 0.75, 1.5, 3, 6),
                 limits = c(0.15, 10)) +
   scale_x_continuous(breaks = seq(0, HORIZON, 0.25),
-                     labels = function(x) paste0(round(x*12), "mo"),
+                     labels = function(x) as.character(round(x * 12)),
                      limits = c(0, HORIZON)) +
   labs(title = "A. Time-varying hazard ratio",
-       x = "Time since treatment start",
+       x = "Time since treatment start (months)",
        y = "HR") +
   theme_classic(base_size = 11) +
   theme(plot.title = element_text(face = "bold", size = 13),
@@ -167,7 +167,7 @@ pB <- ggplot(dfB, aes(x = Month, y = HR, color = Window, group = Window)) +
   scale_color_manual(values = palette_EL) +
   scale_y_log10(breaks = c(0.25, 0.5, 1, 2, 4),
                 minor_breaks = c(0.33, 0.75, 1.5, 3)) +
-  scale_x_continuous(breaks = 1:6, labels = paste("Mo", 1:6)) +
+  scale_x_continuous(breaks = 1:6, labels = as.character(1:6)) +
   labs(title = "B. Adjusted mortality HR by month of LTFU",
        x = "Month of LTFU",
        y = "AHR",
@@ -225,7 +225,7 @@ pC_text <- ggplot(dfC, aes(y = rowlabel)) +
   scale_x_continuous(limits = c(-0.02, 1.02), expand = c(0, 0)) +
   scale_y_discrete(expand = expansion(add = c(0.5, 1.5))) +
   scale_color_brewer(palette = "Dark2", guide = "none") +
-  labs(title = "C. Mortality HR by subgroup") +
+  labs(title = "C. Mortality AHR by subgroup") +
   theme_void(base_size = 11) +
   theme(plot.title = element_text(face = "bold", size = 13,
                                    margin = margin(b = 8)),
