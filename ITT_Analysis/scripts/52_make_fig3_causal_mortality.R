@@ -168,9 +168,9 @@ pB <- ggplot(dfB, aes(x = Month, y = HR, color = Window, group = Window)) +
   scale_y_log10(breaks = c(0.25, 0.5, 1, 2, 4),
                 minor_breaks = c(0.33, 0.75, 1.5, 3)) +
   scale_x_continuous(breaks = 1:6, labels = paste("Mo", 1:6)) +
-  labs(title = "B. Mortality HR by month of LTFU",
+  labs(title = "B. Adjusted mortality HR by month of LTFU",
        x = "Month of LTFU",
-       y = "Hazard ratio",
+       y = "AHR",
        color = NULL) +
   theme_classic(base_size = 11) +
   theme(legend.position = "bottom",
@@ -198,8 +198,13 @@ make_rowlabel <- function(subgroup, level) {
 dfC$rowlabel <- make_rowlabel(dfC$Subgroup, dfC$Level)
 
 # Ordering: subgroup category, then within-category level order
-dfC$Subgroup_clean <- factor(dfC$Subgroup,
-                             levels = c("age_group", "sex", "hiv_aids", "homelessness"))
+dfC$Subgroup_clean <- factor(
+  dplyr::recode(dfC$Subgroup,
+    "age_group"    = "Age",
+    "sex"          = "Sex",
+    "hiv_aids"     = "HIV status",
+    "homelessness" = "Homelessness"),
+  levels = c("Age", "Sex", "HIV status", "Homelessness"))
 dfC <- dfC |> dplyr::arrange(Subgroup_clean, Level) |>
   dplyr::mutate(rowlabel = factor(rowlabel, levels = rev(unique(rowlabel))))
 
@@ -237,7 +242,7 @@ pC_forest <- ggplot(dfC, aes(x = HR, y = rowlabel, color = Subgroup_clean)) +
                 limits = c(0.7, 5)) +
   scale_y_discrete(expand = expansion(add = c(0.5, 1.5))) +
   scale_color_brewer(palette = "Dark2") +
-  labs(x = "Hazard ratio", y = NULL, color = NULL) +
+  labs(x = "AHR", y = NULL, color = NULL) +
   theme_classic(base_size = 11) +
   theme(legend.position = "bottom",
         legend.margin = margin(t = 8),
