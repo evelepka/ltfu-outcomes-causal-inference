@@ -1,7 +1,0 @@
-Retreatment Mediation Analysis (Time-Dependent Cox)
-==================================================
-
-Total Effect HR (Abandonment -> Death): 2.56
-Direct Effect HR (Abandonment -> Death, adjusting for Retreatment): 1.14
-Effect of Retreatment (Retreatment -> Death): 6.54
-Proportion Mediated: 86.1%

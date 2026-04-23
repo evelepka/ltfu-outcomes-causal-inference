@@ -19,33 +19,49 @@ Historically, evaluating the mortality impact of TB treatment abandonment is con
 ## Repository Structure
 
 ```
-├── ITT_Analysis/                                # Authoritative causal pipeline
+├── ITT_Analysis/                                   # Authoritative causal pipeline
 │   ├── scripts/
-│   │   ├── 01_itt_cohort_selection.py           # Cohort builder → itt_cohort.csv (single source of truth)
-│   │   ├── 03_itt_multiple_imputation_models.R  # MI for LTFU subgroup
-│   │   ├── 05_itt_g_formula_analysis.R          # Parametric G-computation
-│   │   ├── 14_itt_landmark_mortality_analysis.R # Landmark survival (post-treatment)
-│   │   ├── 24_itt_ltfu_msm_ipw.R                # Retreatment MSM-IPW
-│   │   ├── 30-41_itt_target_trial_*.R           # Sequential & piecewise target trials, RMST, subgroups
-│   │   └── 33-37_itt_plot_*.R                   # Main paper figures
-│   ├── results/                                 # Walkthrough PDFs, KM datasets, figures
-│   └── Master_Causal_Analysis/                  # Data dictionary (PT) + working docs
-├── 00_clean_sinan.py                            # SINAN ID cleaning → Final_table_cleaned.csv
-├── COHORT_SELECTION.md                          # Technical cohort documentation
-├── CLAUDE.md                                    # Guidance for agents/collaborators
-├── legacy/                                      # Pre-ITT crude analysis (do not run)
-└── README.md                                    # This file
+│   │   ├── _paths.R                                # Shared project-root resolver for R
+│   │   ├── 01_itt_cohort_selection.py              # Cohort builder → itt_cohort.csv (single source of truth)
+│   │   ├── 02_make_itt_table1.py                   # Table 1 (LTFU vs Non-LTFU baseline)
+│   │   ├── 03a_itt_mi_miceforest.py                # Multiple-imputation datasets (miceforest)
+│   │   ├── 03_itt_multiple_imputation_models.R     # MI Cox + Fine–Gray pooled via Rubin's rules
+│   │   ├── 04_itt_make_table2.py                   # Table 2 (multivariable MI + complete-case)
+│   │   ├── 30c_itt_target_trial_early_late.R       # Sequential target-trial HR array (early/late split)
+│   │   ├── 32b_itt_target_trial_subgroups_mi.R     # MI-pooled subgroup target-trial interactions
+│   │   ├── 50_make_fig1_descriptive.R              # Figure 1 — descriptive panel
+│   │   ├── 50a_alluvial_three_column.py            # Figure 1A — 3-column Sankey alluvial
+│   │   ├── 51_make_fig2_stratified_retreatment.R   # Figure 2 — stratified CIF of retreatment
+│   │   ├── 52_make_fig3_causal_mortality.R         # Figure 3 — causal mortality panels
+│   │   ├── make_results_html.py                    # Self-contained results HTML (drops a copy on Desktop)
+│   │   └── archive/                                # Superseded scripts from earlier pipeline iterations
+│   ├── Master_Causal_Analysis/                     # Data dictionary (PT)
+│   └── README_FINAL.md                             # Pipeline README
+├── figures/                                        # Current paper figures (Figure_1/2/3 + alluvial)
+├── 00_clean_sinan.py                               # SINAN ID cleaning → Final_table_cleaned.csv
+├── COHORT_SELECTION.md                             # Technical cohort documentation
+├── CLAUDE.md                                       # Guidance for agents/collaborators
+├── legacy/                                         # Pre-ITT crude analysis (do not run)
+└── README.md                                       # This file
 ```
 
-Data lives in Google Drive at `~/Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/My Drive/Abandonment Paper/` — never committed to git. See `COHORT_SELECTION.md` for paths and the cohort-regeneration workflow.
+All data, intermediate CSVs, and regenerated figures live in Google Drive at `~/Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/My Drive/Abandonment Paper/` — never committed to git. Scripts resolve this path automatically (see `_paths.R` / `01_itt_cohort_selection.py`). See `COHORT_SELECTION.md` for the regeneration workflow.
+
+## Pipeline order
+
+```
+01 → 03a → 03 → 04                (tables + MI models)
+01 → 30c, 32b                     (target-trial CSVs for Figure 3)
+01 → 50a → 50, 51, 52             (figures)
+→ make_results_html.py            (bundles everything into one HTML)
+```
+
+Running `make_results_html.py` produces `TB_Abandonment_Results_YYYY-MM-DD.html` on the Desktop — a self-contained report with base64-embedded figures.
 
 ## Documentation
 - `COHORT_SELECTION.md` — cohort definition, inclusion/exclusion, time variables, and regeneration workflow
 - `CLAUDE.md` — agent / collaborator guidance (where data lives, common pitfalls, what not to do)
 - `ITT_Analysis/README_FINAL.md` — pipeline-level README
-
-## Abstract Synthesis
-For a complete, print-ready synthesis of the advanced causal findings, please see `ITT_Analysis/results/causal_analysis_summary.pdf`.
 
 ## Dependencies
 - **R**: `survival`, `dplyr`, `broom`, `survivalROC`

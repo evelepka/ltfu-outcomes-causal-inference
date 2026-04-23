@@ -68,11 +68,11 @@ OBITO_OUTCOMES = {"Obito TB", "Obito NTB"}
 # Palette — muted pastels with strong accent for each outcome.
 # Short labels keep text inside their column; count/% appended by renderer.
 NODE_COLORS = {
-    "Index Loss to Follow Up":       "rgba(142,  68, 173, 0.90)",  # purple
+    "Index LTFU":                    "rgba(142,  68, 173, 0.90)",  # purple
     "Retreatment":                   "rgba( 41, 128, 185, 0.90)",  # blue
     "Died (no retreatment)":         "rgba( 44,  62,  80, 0.90)",  # dark
     "No further outcome":            "rgba(176, 190, 197, 0.90)",  # grey
-    "Lost to follow up":             "rgba(231,  76,  60, 0.90)",  # red
+    "LTFU":                          "rgba(231,  76,  60, 0.90)",  # red
     "Cured":                         "rgba( 46, 204, 113, 0.90)",  # green
     "Died":                          "rgba( 44,  62,  80, 0.90)",  # dark
     "Failure":                       "rgba(230, 126,  34, 0.90)",  # orange
@@ -112,7 +112,7 @@ print(f"  Raw rows for LTFU individuals: {len(full):,}")
 def classify_retreat_outcome(outcome: str, ep_end, death_date) -> str:
     o = (str(outcome) if outcome is not None else "").strip()
     if o in ABANDON_OUTCOMES:
-        return "Lost to follow up"
+        return "LTFU"
     if o == "Cura":
         return "Cured"
     if o in OBITO_OUTCOMES:
@@ -170,7 +170,7 @@ TOTAL = len(ltfu)
 # Col 1: Died (small) on top, Retreatment in middle, No further outcome (largest) on bottom.
 # Col 2: stacked smallest-to-largest — Failure, Other, Died, Cured, Lost to follow up.
 ALL_NODES_ORDERED = [
-    (0, "Index Loss to Follow Up"),
+    (0, "Index LTFU"),
     (1, "Died (no retreatment)"),
     (1, "Retreatment"),
     (1, "No further outcome"),
@@ -178,7 +178,7 @@ ALL_NODES_ORDERED = [
     (2, "Other"),
     (2, "Died"),
     (2, "Cured"),
-    (2, "Lost to follow up"),
+    (2, "LTFU"),
 ]
 
 # Explicit y-positions (0=top, 1=bottom). Cumulative-proportion stacking;
@@ -187,7 +187,7 @@ ALL_NODES_ORDERED = [
 def _node_y_positions():
     y = {}
     # Col 0
-    y[(0, "Index Loss to Follow Up")] = 0.5
+    y[(0, "Index LTFU")] = 0.5
     return y
 # Position calculation happens later, after counts are tallied.
 node_idx = {n: i for i, n in enumerate(ALL_NODES_ORDERED)}
@@ -195,9 +195,9 @@ node_size = defaultdict(int)
 flows = defaultdict(int)
 
 for _, row in ltfu.iterrows():
-    node_size[(0, "Index Loss to Follow Up")] += 1
+    node_size[(0, "Index LTFU")] += 1
     node_size[(1, row["col1"])] += 1
-    flows[((0, "Index Loss to Follow Up"), (1, row["col1"]))] += 1
+    flows[((0, "Index LTFU"), (1, row["col1"]))] += 1
 
 for _, row in retreated.iterrows():
     node_size[(2, row["col2"])] += 1
@@ -292,37 +292,24 @@ fig = go.Figure(go.Sankey(
 
 # Column headers
 headers = {
-    0: "Index Loss to Follow Up",
-    1: "First Outcome After Loss to Follow Up",
+    0: "Index LTFU",
+    1: "First Outcome After LTFU",
     2: "Retreatment Episode Outcome",
 }
 annotations = [
     dict(x=X_POSITIONS[c], y=1.06, xref="paper", yref="paper",
          text=f"<b>{t}</b>", showarrow=False,
-         font=dict(size=13, color="#1a1a2e", family="Arial"),
+         font=dict(size=16, color="#1a1a2e", family="Arial"),
          xanchor="center", yanchor="bottom")
     for c, t in headers.items()
 ]
-annotations.append(dict(
-    x=0.0, y=-0.08, xref="paper", yref="paper",
-    text=(f"<i>N = {TOTAL:,} individuals with loss to follow-up on their first new (Novo) TB episode. "
-          f"Retreatment episode outcomes draw from the subsequent notification in SINAN "
-          f"(case_outcome field). Follow-up censored {CENSOR_DATE.date()}. "
-          f"Flows &lt; {MIN_FLOW} hidden.</i>"),
-    showarrow=False, font=dict(size=10, family="Arial", color="#555"),
-    xanchor="left", yanchor="top"
-))
 
 fig.update_layout(
-    # No plotly title — the surrounding figure (Figure 1) carries its own
-    # panel title "A. TB trajectories after loss to follow-up". Keeping a
-    # duplicate here caused visible collision in the composed Figure 1.
-    font=dict(size=12, family="Arial", color="#2c2c2c"),
-    paper_bgcolor="#F8F9FA",
-    plot_bgcolor="#F8F9FA",
-    # Compact aspect (~1.1:1) so the left panel of Figure 1 doesn't stretch it.
+    font=dict(size=14, family="Arial", color="#2c2c2c"),
+    paper_bgcolor="#ffffff",
+    plot_bgcolor="#ffffff",
     height=1000, width=1100,
-    margin=dict(l=30, r=30, t=50, b=140),
+    margin=dict(l=30, r=30, t=60, b=40),
     annotations=annotations,
 )
 

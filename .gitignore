@@ -1,5 +1,12 @@
 # Raw data files — not included (patient privacy)
 data/
+ITT_Analysis/data/
+Data/
+
+# Generated analysis outputs live in Google Drive, not in the repo.
+# Scripts write to $PROJECT_ROOT/ITT_Analysis/results/ which resolves to GDrive.
+# If that folder ever materializes locally, don't commit it.
+ITT_Analysis/results/
 
 # Large cohort CSVs — not included
 abandonment_cohort*.csv
@@ -8,3 +15,4 @@ abandonment_cohort*.csv
 __pycache__/
 *.pyc
 *.pyo
+.DS_Store
