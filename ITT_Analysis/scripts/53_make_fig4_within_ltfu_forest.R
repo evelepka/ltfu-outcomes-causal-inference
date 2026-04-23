@@ -178,7 +178,8 @@ p_cox_forest <- ggplot(cox, aes(y = Label)) +
              shape = 23, size = 2.4, fill = "white", color = ref_color) +
   scale_x_log10(breaks = c(0.25, 0.5, 1, 2, 4),
                 minor_breaks = c(0.33, 0.75, 1.5, 3),
-                limits = c(0.2, 6)) +
+                limits = c(0.25, 4.25),
+                oob = scales::oob_squish) +
   facet_grid(rows = vars(Group), scales = "free_y", space = "free_y") +
   labs(title = "A. Adjusted mortality HR",
        x = "AHR", y = NULL) +
@@ -225,9 +226,9 @@ p_fg_forest <- ggplot(fg, aes(y = Label)) +
   geom_point(data = fg[fg$is_ref, ],
              aes(x = 1, y = Label),
              shape = 23, size = 2.4, fill = "white", color = ref_color) +
-  scale_x_log10(breaks = c(0.5, 1, 1.5, 2, 3),
-                minor_breaks = c(0.75, 1.25, 1.75, 2.5),
-                limits = c(0.5, 3.5)) +
+  scale_x_log10(breaks = c(0.5, 1, 1.5, 2, 2.5),
+                minor_breaks = c(0.75, 1.25, 1.75, 2.25),
+                limits = c(0.5, 2.5)) +
   facet_grid(rows = vars(Group), scales = "free_y", space = "free_y") +
   labs(title = "B. Adjusted retreatment SHR",
        x = "SHR", y = NULL) +
