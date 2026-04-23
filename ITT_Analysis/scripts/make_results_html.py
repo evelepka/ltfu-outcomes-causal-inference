@@ -105,6 +105,48 @@ def _fmt_hr(df):
     return d
 
 
+# Clean labels for both the multivariable Cox/FG table (term = variableLEVEL)
+# and the subgroup target-trial table (Subgroup + Level columns).
+TERM_LABELS = {
+    "age_group25-44":                                          "Age: 25-44 years",
+    "age_group45-64":                                          "Age: 45-64 years",
+    "age_group≥65":                                            "Age: ≥65 years",
+    "sexMale":                                                 "Male",
+    "race_cleanBlack or Mixed":                                "Race: Black or Mixed",
+    "race_cleanOther":                                         "Race: Other",
+    "edu_clean8 - 11 years":                                   "Education: 8-11 years",
+    "edu_clean≤ 7 years":                                      "Education: ≤7 years",
+    "edu_cleanNone":                                           "No formal education",
+    "hiv_aidsPositive":                                        "HIV-positive",
+    "diabetesYes":                                             "Diabetes",
+    "alcoholYes":                                              "Alcohol use",
+    "drug_useYes":                                             "Drug use",
+    "incarceratedYes":                                         "Incarcerated",
+    "homelessnessYes":                                         "Experiencing homelessness",
+    "hosp_admissionYes":                                       "Hospital admission",
+    "clinical_cleanExtrapulmonary":                            "Extrapulmonary",
+    "clinical_cleanPulmonary and Extrapulmonary or disseminated": "Mixed/disseminated",
+    "dot_statusYes":                                           "Directly-observed therapy",
+    "tx_month_grp< 2 months":                                  "LTFU in <2 months",
+    "tx_month_grp2 to <4 months":                              "LTFU in 2–4 months",
+}
+
+def clean_term(t: str) -> str:
+    return TERM_LABELS.get(t, t)
+
+
+def clean_subgroup_level(subgroup: str, level: str) -> str:
+    if subgroup == "age_group":
+        return f"Age: {level} years"
+    if subgroup == "sex":
+        return level  # Female / Male
+    if subgroup == "hiv_aids":
+        return "HIV-negative" if level == "Negative" else "HIV-positive"
+    if subgroup == "homelessness":
+        return "Experiencing homelessness" if level == "Yes" else "Housed"
+    return f"{subgroup} — {level}"
+
+
 if tt_array_el is not None:
     wide = tt_array_el.copy()
     wide["label"] = wide.apply(
@@ -120,19 +162,29 @@ else:
     tt_array_fmt = None
 
 if tt_subgroups is not None:
-    tt_sub_fmt = _fmt_hr(tt_subgroups)
-    tt_sub_fmt["window"] = tt_sub_fmt.apply(
-        lambda r: f"{r['model']} (cap {r['cap']:g}y)", axis=1
+    # Figure 3 uses the 24-month (cap=2) late model — match it in the table.
+    tt_sub_src = tt_subgroups[(tt_subgroups["model"] == "late") & (tt_subgroups["cap"] == 2)]
+    tt_sub_fmt = _fmt_hr(tt_sub_src)
+    tt_sub_fmt["Characteristic"] = tt_sub_fmt.apply(
+        lambda r: clean_subgroup_level(r["Subgroup"], r["Level"]), axis=1
     )
-    tt_sub_fmt = tt_sub_fmt[["Subgroup", "Level", "window", "HR (95% CI)", "p-value", "N_imp"]]
+    tt_sub_fmt = tt_sub_fmt[["Characteristic", "HR (95% CI)", "p-value", "N_imp"]]
+    tt_sub_fmt = tt_sub_fmt.rename(columns={"HR (95% CI)": "AHR (95% CI)"})
 else:
     tt_sub_fmt = None
 
-# Split the mi_cc table by model for display
+# Split the mi_cc table by model for display; apply clean term labels.
 mi_cc_panels = {}
 if mi_cc is not None:
     for model in mi_cc["model"].unique():
-        mi_cc_panels[model] = mi_cc[mi_cc["model"] == model][["term", "estimate", "p_value"]]
+        tbl = mi_cc[mi_cc["model"] == model][["term", "estimate", "p_value"]].copy()
+        tbl["term"] = tbl["term"].apply(clean_term)
+        tbl = tbl.rename(columns={
+            "term": "Characteristic",
+            "estimate": "Estimate (95% CI)",
+            "p_value": "p-value",
+        })
+        mi_cc_panels[model] = tbl
 
 generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -347,7 +399,6 @@ html = f"""<!doctype html>
 {section("Figure 3 — Causal mortality panels", "fig3", f'''
 <figure>
   <img src="{fig3_src}" alt="Figure 3">
-  <figcaption>Figure 3. A — Crude time-varying cumulative hazard illustrating immortal-time bias. B — MI-pooled sequential target-trial hazard ratio by month of abandonment. C — MI-pooled subgroup-stratified target-trial hazard ratios (forest plot).</figcaption>
 </figure>
 <div class="two-col">
   <div>
