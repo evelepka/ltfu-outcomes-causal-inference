@@ -1,19 +1,20 @@
 # 52b. Figure 3 (defn-B primary) — Causal mortality panels
 # ==============================================================================
-# Mirrors 52 but uses the defn-B + grace target-trial outputs as primary.
-# Outputs to *_defnB.png/pdf to preserve the original Figure_3 files.
-#
-# Panels (same as 52):
-#   A. Crude time-varying HR(t) — exposure transition at end_date - 30d
-#      under defn-B (actual disengagement, not classification).
-#   B. Sequential target-trial Cox HR by month, early/late
-#      (from target_trial_defnB_mi_early_late_array.csv).
-#   C. Subgroup forest, late mortality
-#      (from target_trial_defnB_subgroups_mi.csv).
+# Mirrors 52 (and inherits its polish) but uses defn-B primary inputs:
+#   - Panel A: HR(t) piecewise Cox; LTFU exposure transition shifted to
+#     end_date − 30d (actual disengagement, not classification date).
+#   - Panel B: target_trial_defnB_mi_early_late_array.csv  (from 30h)
+#     Late = 6–24 mo (cap=2), matching Fig 3 primary horizon.
+#   - Panel C: target_trial_defnB_subgroups_mi.csv  (from 32e), late, cap=2.
+# Output: Figure_3_causal_mortality_defnB.{png,pdf}
 # ==============================================================================
 
 suppressPackageStartupMessages({
-  library(dplyr); library(ggplot2); library(survival); library(patchwork); library(scales)
+  library(dplyr)
+  library(ggplot2)
+  library(survival)
+  library(patchwork)
+  library(scales)
 })
 
 .here <- function() {
@@ -21,7 +22,10 @@ suppressPackageStartupMessages({
   file_arg <- grep("^--file=", args, value = TRUE)
   if (length(file_arg)) return(dirname(normalizePath(sub("^--file=", "", file_arg[1]))))
   frames <- sys.frames()
-  for (f in rev(frames)) { of <- f$ofile; if (!is.null(of)) return(dirname(normalizePath(of))) }
+  for (f in rev(frames)) {
+    of <- f$ofile
+    if (!is.null(of)) return(dirname(normalizePath(of)))
+  }
   getwd()
 }
 source(file.path(.here(), "_paths.R"))
@@ -33,14 +37,13 @@ SHIFT_DAYS <- 30
 SHIFT_YRS  <- SHIFT_DAYS / 365.25
 
 # ---------------------------------------------------------------------------
-# Panel A: HR(t) piecewise Cox using defn-B exposure transition
+# Panel A: Time-varying hazard RATIO HR(t) via piecewise Cox (defn-B)
 # ---------------------------------------------------------------------------
 cat("[fig3-defnB] Panel A: HR(t) piecewise Cox (defn-B) ...\n")
 df <- read.csv(COHORT_CSV, stringsAsFactors = FALSE)
 df$patient_id <- seq_len(nrow(df))
 df$tx_dur <- as.numeric(difftime(as.Date(df$end_date),
                                  as.Date(df$best_start), units = "days")) / 365.25
-# Defn-B: actual disengagement is ~30d before recorded end_date
 df$tx_dur_true <- pmax(df$tx_dur - SHIFT_YRS, 1/365.25)
 
 HORIZON <- 2.0
@@ -93,6 +96,7 @@ bucket_hr <- function(d, bin) {
 bins <- levels(df_piecewise$month_bin)
 hr_tbl <- do.call(rbind, lapply(bins, function(b) bucket_hr(df_piecewise, b)))
 hr_tbl <- hr_tbl[is.finite(hr_tbl$HR) & is.finite(hr_tbl$CI_H) & hr_tbl$CI_H < 50, ]
+cat(sprintf("[fig3-defnB] Piecewise HR(t) estimated at %d time buckets\n", nrow(hr_tbl)))
 
 write.csv(hr_tbl,
           file.path(ITT_RESULTS_DIR, "Figure_3a_HR_over_time_defnB.csv"),
@@ -100,7 +104,6 @@ write.csv(hr_tbl,
 
 pA <- ggplot(hr_tbl, aes(x = month_mid, y = HR)) +
   geom_hline(yintercept = 1, linetype = "dashed", linewidth = 0.5) +
-  geom_point(color = "#c0392b", size = 1.6, alpha = 0.35) +
   geom_smooth(method = "loess", span = 0.55, se = TRUE,
               color = "#c0392b", fill = "#e74c3c",
               linewidth = 1.4, alpha = 0.22) +
@@ -108,15 +111,13 @@ pA <- ggplot(hr_tbl, aes(x = month_mid, y = HR)) +
                 minor_breaks = c(0.33, 0.75, 1.5, 3, 6),
                 limits = c(0.15, 10)) +
   scale_x_continuous(breaks = seq(0, HORIZON, 0.25),
-                     labels = function(x) paste0(round(x*12), "mo"),
+                     labels = function(x) as.character(round(x * 12)),
                      limits = c(0, HORIZON)) +
-  labs(title = "A. Time-varying hazard ratio (crude, counting-process)",
-       subtitle = "Piecewise monthly HR for disengaged vs. on-treatment (defn B: exposure at last visit, ≈30d before recorded end_date).\nEarly months: apparent HR<1 (immortal-time artefact). Later months: HR grows as disengagement mortality accumulates.",
-       x = "Time since treatment start",
-       y = "HR (log scale)") +
+  labs(title = "A. Time-varying hazard ratio",
+       x = "Time since treatment start (months)",
+       y = "HR") +
   theme_classic(base_size = 11) +
   theme(plot.title = element_text(face = "bold", size = 13),
-        plot.subtitle = element_text(size = 9),
         panel.grid.major.y = element_line(color = "grey88", linewidth = 0.35),
         panel.grid.minor.y = element_line(color = "grey94", linewidth = 0.25))
 
@@ -128,18 +129,17 @@ tt_csv <- file.path(ITT_RESULTS_DIR, "target_trial_defnB_mi_early_late_array.csv
 if (!file.exists(tt_csv)) stop(sprintf("Missing %s (run 30h)", tt_csv))
 dfB_raw <- read.csv(tt_csv, stringsAsFactors = FALSE)
 dfB <- dfB_raw |>
-  dplyr::filter((model == "early" & cap == 0.5) | (model == "late" & cap == 5)) |>
+  dplyr::filter((model == "early" & cap == 0.5) | (model == "late" & cap == 2)) |>
   dplyr::mutate(
     Month = as.numeric(gsub("Month_", "", Trial_Month)),
     Window = dplyr::recode(model,
-                           "early" = "Early (0–6 months post-disengagement)",
-                           "late"  = "Late (6–60 months post-disengagement)")
+                           "early" = "Early (0–6 months)",
+                           "late"  = "Late (6–24 months)")
   )
-dfB$Window <- factor(dfB$Window, levels = c("Early (0–6 months post-disengagement)",
-                                              "Late (6–60 months post-disengagement)"))
+dfB$Window <- factor(dfB$Window, levels = c("Early (0–6 months)", "Late (6–24 months)"))
 
-palette_EL <- c("Early (0–6 months post-disengagement)" = "#3498db",
-                "Late (6–60 months post-disengagement)" = "#e74c3c")
+palette_EL <- c("Early (0–6 months)" = "#3498db",
+                "Late (6–24 months)" = "#e74c3c")
 
 pB <- ggplot(dfB, aes(x = Month, y = HR, color = Window, group = Window)) +
   geom_hline(yintercept = 1, linetype = "dashed", linewidth = 0.5) +
@@ -150,60 +150,65 @@ pB <- ggplot(dfB, aes(x = Month, y = HR, color = Window, group = Window)) +
   scale_color_manual(values = palette_EL) +
   scale_y_log10(breaks = c(0.25, 0.5, 1, 2, 4),
                 minor_breaks = c(0.33, 0.75, 1.5, 3)) +
-  scale_x_continuous(breaks = 1:6, labels = paste("Mo", 1:6)) +
-  labs(title = "B. Mortality HR by month of disengagement (defn-B, grace-period eligibility)",
-       subtitle = "Sequential target-trial emulation; MI-pooled; trial-month = month patient last attended treatment",
-       x = "Month of disengagement (last attended visit)",
-       y = "Hazard ratio (log scale)",
+  scale_x_continuous(breaks = 1:6, labels = as.character(1:6)) +
+  labs(title = "B. Adjusted mortality HR by month of LTFU",
+       x = "Month of LTFU",
+       y = "AHR",
        color = NULL) +
   theme_classic(base_size = 11) +
   theme(legend.position = "bottom",
         plot.title = element_text(face = "bold", size = 13),
-        plot.subtitle = element_text(size = 9),
         panel.grid.major.y = element_line(color = "grey88", linewidth = 0.35),
         panel.grid.minor.y = element_line(color = "grey94", linewidth = 0.25))
 
 # ---------------------------------------------------------------------------
-# Panel C: Subgroup forest — LATE mortality (defn-B + grace)
+# Panel C: Subgroup forest — LATE mortality (defn-B + grace, cap = 2)
 # ---------------------------------------------------------------------------
-cat("[fig3-defnB] Panel C: subgroup forest (defn-B + grace) ...\n")
+cat("[fig3-defnB] Panel C: subgroup forest (defn-B + grace, 24mo cap) ...\n")
 sub_csv <- file.path(ITT_RESULTS_DIR, "target_trial_defnB_subgroups_mi.csv")
 if (!file.exists(sub_csv)) stop(sprintf("Missing %s (run 32e)", sub_csv))
 dfC_all <- read.csv(sub_csv, stringsAsFactors = FALSE)
-dfC <- dfC_all |> dplyr::filter(model == "late", cap == 5)
+dfC <- dfC_all |> dplyr::filter(model == "late", cap == 2)
 
-dfC <- dfC |>
-  dplyr::mutate(
-    Subgroup_clean = dplyr::recode(Subgroup,
-      "age_group"    = "Age group",
-      "sex"          = "Sex",
-      "hiv_aids"     = "HIV status",
-      "homelessness" = "Homelessness"
-    ),
-    Level_clean = dplyr::recode(Level,
-      "Negative" = "HIV-negative", "Positive" = "HIV-positive",
-      "No" = "Not homeless", "Yes" = "Homeless"
-    ),
-    rowlabel = sprintf("%s — %s", Subgroup_clean, Level_clean)
-  )
-dfC$Subgroup_clean <- factor(dfC$Subgroup_clean,
-                             levels = c("Age group", "Sex", "HIV status", "Homelessness"))
+make_rowlabel <- function(subgroup, level) {
+  ifelse(subgroup == "age_group",    paste0("Age: ", level, " years"),
+  ifelse(subgroup == "sex",          level,
+  ifelse(subgroup == "hiv_aids",     ifelse(level == "Negative", "HIV-negative", "HIV-positive"),
+  ifelse(subgroup == "homelessness", ifelse(level == "Yes", "Experiencing homelessness", "Housed"),
+  paste(subgroup, level, sep = " — ")))))
+}
+dfC$rowlabel <- make_rowlabel(dfC$Subgroup, dfC$Level)
+
+dfC$Subgroup_clean <- factor(
+  dplyr::recode(dfC$Subgroup,
+    "age_group"    = "Age",
+    "sex"          = "Sex",
+    "hiv_aids"     = "HIV status",
+    "homelessness" = "Homelessness"),
+  levels = c("Age", "Sex", "HIV status", "Homelessness"))
 dfC <- dfC |> dplyr::arrange(Subgroup_clean, Level) |>
   dplyr::mutate(rowlabel = factor(rowlabel, levels = rev(unique(rowlabel))))
+
 dfC$hr_text <- sprintf("%.2f (%.2f–%.2f)", dfC$HR, dfC$CI_L, dfC$CI_H)
+
+y_top <- length(levels(dfC$rowlabel)) + 0.8
 
 pC_text <- ggplot(dfC, aes(y = rowlabel)) +
   geom_text(aes(x = 0, label = rowlabel, color = Subgroup_clean),
-            hjust = 0, size = 3.6, fontface = "plain") +
+            hjust = 0, size = 3.8, fontface = "plain") +
   geom_text(aes(x = 1, label = hr_text),
-            hjust = 1, size = 3.5, color = "grey25") +
+            hjust = 1, size = 3.7, color = "grey25") +
+  annotate("text", x = 0, y = y_top, label = "Characteristic",
+           hjust = 0, fontface = "bold", size = 3.9, color = "grey20") +
+  annotate("text", x = 1, y = y_top, label = "AHR (95% CI)",
+           hjust = 1, fontface = "bold", size = 3.9, color = "grey20") +
   scale_x_continuous(limits = c(-0.02, 1.02), expand = c(0, 0)) +
+  scale_y_discrete(expand = expansion(add = c(0.5, 1.5))) +
   scale_color_brewer(palette = "Dark2", guide = "none") +
-  labs(title = "C. Late-mortality HR by subgroup (defn-B, grace)",
-       subtitle = "Sequential target-trial emulation; deaths 6–60 months post-disengagement; MI-pooled") +
+  labs(title = "C. Mortality AHR by subgroup") +
   theme_void(base_size = 11) +
-  theme(plot.title = element_text(face = "bold", size = 13, margin = margin(b = 2)),
-        plot.subtitle = element_text(size = 9, color = "grey40", margin = margin(b = 8)),
+  theme(plot.title = element_text(face = "bold", size = 13,
+                                   margin = margin(b = 8)),
         plot.margin = margin(5, 2, 20, 8))
 
 pC_forest <- ggplot(dfC, aes(x = HR, y = rowlabel, color = Subgroup_clean)) +
@@ -215,8 +220,9 @@ pC_forest <- ggplot(dfC, aes(x = HR, y = rowlabel, color = Subgroup_clean)) +
   scale_x_log10(breaks = c(0.5, 1, 2, 3, 4),
                 minor_breaks = c(0.75, 1.5, 2.5, 3.5),
                 limits = c(0.7, 5)) +
+  scale_y_discrete(expand = expansion(add = c(0.5, 1.5))) +
   scale_color_brewer(palette = "Dark2") +
-  labs(x = "Hazard ratio (log scale)", y = NULL, color = NULL) +
+  labs(x = "AHR", y = NULL, color = NULL) +
   theme_classic(base_size = 11) +
   theme(legend.position = "bottom",
         legend.margin = margin(t = 8),
@@ -229,9 +235,14 @@ pC_forest <- ggplot(dfC, aes(x = HR, y = rowlabel, color = Subgroup_clean)) +
 
 pC <- pC_text + pC_forest + plot_layout(widths = c(1.4, 1))
 
+# ---------------------------------------------------------------------------
+# Compose: A on top, B and C side-by-side beneath
+# ---------------------------------------------------------------------------
 fig3 <- pA / (pB | pC) +
   plot_layout(heights = c(1, 1.1)) +
-  plot_annotation(theme = theme(plot.background = element_rect(fill = "white", color = NA)))
+  plot_annotation(
+    theme = theme(plot.background = element_rect(fill = "white", color = NA))
+  )
 
 ggsave(OUT_PNG, fig3, width = 14, height = 10, dpi = 300, bg = "white")
 ggsave(OUT_PDF, fig3, width = 14, height = 10, bg = "white")
