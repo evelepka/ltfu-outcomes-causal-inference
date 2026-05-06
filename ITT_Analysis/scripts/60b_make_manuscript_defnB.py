@@ -976,6 +976,11 @@ add_bullets([
     "Effect modification by age and housing highlights where "
     "interventions will have the highest relative impact, and where "
     "absolute burden demands parallel structural investment.",
+    "Differential return-to-treatment (sicker patients more likely to "
+    "re-engage; Figure 5) dilutes the LTFU exposure preferentially "
+    "among the highest-risk individuals, making the intention-to-treat "
+    "estimates a lower bound on the on-treatment effect of sustained "
+    "LTFU.",
 ])
 
 add_heading("3. Comparison with prior literature", level=2)
@@ -1040,7 +1045,12 @@ add_heading("7. Conclusions", level=2)
 add_para(
     "Less than half of individuals lost to follow-up during a first "
     "tuberculosis episode returned to care, and those who did had more "
-    "severe baseline disease. Once classical immortal-time bias and "
+    "severe baseline disease. Because retreatment was concentrated "
+    "among the most severely ill, the intention-to-treat estimates "
+    "reported here are a lower bound on the on-treatment effect of "
+    "sustained LTFU; the cause-specific TB-attributable separation, "
+    "in particular, is likely an under-estimate of the biological "
+    "effect of interrupted therapy. Once classical immortal-time bias and "
     "the classification asymmetry of the 30-day LTFU rule were "
     "addressed under a symmetric grace-period target-trial design, "
     "LTFU at any month of therapy carried an approximately 2–3-fold "
