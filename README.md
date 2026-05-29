@@ -1,72 +1,102 @@
-# Outcomes After TB Treatment Abandonment
+# Outcomes After TB Treatment Loss to Follow-Up
 
-Causal epidemiological analysis of retreatment and long-term mortality following tuberculosis (TB) treatment abandonment in São Paulo, Brazil (2013–2023).
+Causal-inference analysis of mortality after tuberculosis treatment loss to follow-up (LTFU) in São Paulo State, Brazil (2013–2023), linking the state TB surveillance system (TBweb) with the national death registry (SIM).
 
-## Research Question
+The headline analysis is a **sequential target-trial emulation** with a symmetric 30-day grace-period landmark, comparing patients who became LTFU at each month of therapy with concurrent on-treatment controls under aligned time at risk.
 
-Historically, evaluating the mortality impact of TB treatment abandonment is confounded by immortal time bias (late abandoners appear falsely protected) and symptomatic presentation bias (returning to care falsely appears harmful). This repository utilizes advanced causal inference modeling to answer:
-1. What is the true mortality penalty of abandoning TB therapy over the 6-month treatment course? 
-2. Does returning to therapy rescue patients, or does it serve as a proxy for clinical deterioration?
-3. Which patient subpopulations disproportionately suffer the relative mortality penalties of abandonment?
+## Cohort
 
-## Key Findings (Causal Analysis Phase)
+- **N = 171,069** individuals initiating tuberculosis therapy (2013–2023; first episode; recorded treatment start required).
+- **20,830 (12.2%)** experienced loss to follow-up during the index treatment.
+- **150,239** had alternative outcomes (cure, on-treatment death, treatment failure, regimen change).
+- Median post-LTFU follow-up: 5.0 years (IQR 2.5–8.0).
 
-**Overall ITT cohort:** 172,463 individuals successfully initiating therapy, of which 21,619 (12.5%) abandoned treatment.
-- **The Paradox of Retreatment:** Among those who abandoned, 43.8% re-entered treatment. Using Marginal Structural Models (MSM) with Inverse Probability Weighting (IPW), returning to care carried an **overwhelming 5-fold increase in mortality (aHR ~5.0)**. Returning to care functions not as a protective behavior, but as a distress beacon for severe, acute disease progression.
-- **Sequential Target Trials:** To eliminate immortal time bias, we compared abandoners explicitly against mathematically matched patients who remained *actively on therapy*. Patients abandoning as late as **Month 4 still suffered a 2.26-fold relative mortality risk**, proving late abandonment is catastrophic.
-- **Competing Risks (Effect Modification):** Subgroup interaction models revealed the mathematical penalty for abandoning is actually *worse* for healthy populations (age 15-24 HR 4.14 vs. age 45-64 HR 1.92). Marginalized populations (homeless, HIV+) suffer such overwhelming absolute baseline mortality irrespective of treatment that their relative penalty for dropping out is mechanically blunted.
+## Key results
 
-## Repository Structure
+- **Late-mortality penalty of LTFU is causal and persistent across months of treatment.** Sequential target-trial adjusted hazard ratios for late mortality (6–24 months post-landmark) range from **1.83 (95% CI 1.27–2.63)** at month 6 to **2.85 (2.33–3.48)** at month 3.
+- **The excess is TB-specific.** Cause-specific HRs for TB-attributable death are 1.61–4.36 across months 1–6; non-TB death HRs are essentially null (0.96–1.48). This negative-control contrast supports a causal effect of interrupted TB therapy rather than residual selection.
+- **Most of the late-window effect is mediated through return-to-care.** Within the LTFU subgroup, baseline-adjusted hazard for returners vs non-returners is 2.01 (1.68–2.41) under ITT; after IPCW for the return event, it falls to 0.68 (0.51–0.92), implying the bulk of excess mortality occurs in the disengage-recur-return cycle.
+- **Early-window aHRs sit at or below unity** (range 0.63–1.16 across months 1–6) and reflect residual survival/selection biases that the target-trial design cannot fully eliminate, not a protective effect of disengagement.
+- **Effect modification:** relative penalty is largest in younger and stably housed individuals (where competing-mortality baseline is low) and smallest in homeless individuals and people aged ≥65 (where baseline mortality is already high).
+
+## Repository layout
 
 ```
-├── ITT_Analysis/                                   # Authoritative causal pipeline
-│   ├── scripts/
-│   │   ├── _paths.R                                # Shared project-root resolver for R
-│   │   ├── 01_itt_cohort_selection.py              # Cohort builder → itt_cohort.csv (single source of truth)
-│   │   ├── 02_make_itt_table1.py                   # Table 1 (LTFU vs Non-LTFU baseline)
-│   │   ├── 03a_itt_mi_miceforest.py                # Multiple-imputation datasets (miceforest)
-│   │   ├── 03_itt_multiple_imputation_models.R     # MI Cox + Fine–Gray pooled via Rubin's rules
-│   │   ├── 04_itt_make_table2.py                   # Table 2 (multivariable MI + complete-case)
-│   │   ├── 30c_itt_target_trial_early_late.R       # Sequential target-trial HR array (early/late split)
-│   │   ├── 32b_itt_target_trial_subgroups_mi.R     # MI-pooled subgroup target-trial interactions
-│   │   ├── 50_make_fig1_descriptive.R              # Figure 1 — descriptive panel
-│   │   ├── 50a_alluvial_three_column.py            # Figure 1A — 3-column Sankey alluvial
-│   │   ├── 51_make_fig2_stratified_retreatment.R   # Figure 2 — stratified CIF of retreatment
-│   │   ├── 52_make_fig3_causal_mortality.R         # Figure 3 — causal mortality panels
-│   │   ├── make_results_html.py                    # Self-contained results HTML (drops a copy on Desktop)
-│   │   └── archive/                                # Superseded scripts from earlier pipeline iterations
-│   ├── Master_Causal_Analysis/                     # Data dictionary (PT)
-│   └── README_FINAL.md                             # Pipeline README
-├── figures/                                        # Current paper figures (Figure_1/2/3 + alluvial)
-├── 00_clean_sinan.py                               # SINAN ID cleaning → Final_table_cleaned.csv
-├── COHORT_SELECTION.md                             # Technical cohort documentation
-├── CLAUDE.md                                       # Guidance for agents/collaborators
-├── legacy/                                         # Pre-ITT crude analysis (do not run)
-└── README.md                                       # This file
+outcomes-after-tb-abandonment/
+├── README.md                  (this file)
+├── COHORT_SELECTION.md        cohort definition and inclusion/exclusion details
+├── CLAUDE.md                  agent / collaborator guidance
+├── .gitignore                 excludes data/ and results/
+├── manuscript/
+│   ├── Draft_2026-05-29.docx       current manuscript
+│   ├── Appendix_2026-05-29.docx    current appendix (12 sensitivity sections)
+│   └── Appendix_2026-05-29.md      markdown source for the appendix
+├── figures/
+│   ├── Figure_1_descriptive.{png,pdf}        post-LTFU trajectories
+│   ├── Figure_2_cif_retreatment.{png,pdf}    24-mo cumulative incidence of retreatment
+│   ├── Figure_3_within_ltfu_forest.{png,pdf} within-LTFU multivariable Cox + Fine-Gray
+│   ├── Figure_4_causal_mortality.{png,pdf}   target-trial HR(t) + monthly aHR array
+│   └── Figure_5_cause_specific.{png,pdf}     TB vs non-TB cause-specific aHRs
+└── ITT_Analysis/
+    ├── README.md              pipeline-level documentation
+    ├── Master_Causal_Analysis/ data dictionary (PT)
+    └── scripts/
+        ├── _paths.R                              shared project-root resolver
+        ├── 00_clean_sinan.py                     SINAN ID/date cleaning
+        ├── 01_itt_cohort_selection.py            cohort builder
+        ├── 02_make_itt_table1.py                 baseline characteristics
+        ├── 03a_itt_mi_miceforest.py              multiple imputation
+        ├── 03_itt_multiple_imputation_models.R   within-LTFU Cox + Fine-Gray
+        ├── ...                                   (full pipeline below)
+        └── 61_build_dr_status_corrected.py       multi-source DR-status classifier
 ```
 
-All data, intermediate CSVs, and regenerated figures live in Google Drive at `~/Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/My Drive/Abandonment Paper/` — never committed to git. Scripts resolve this path automatically (see `_paths.R` / `01_itt_cohort_selection.py`). See `COHORT_SELECTION.md` for the regeneration workflow.
+Raw data files and intermediate CSVs are not committed (patient privacy). All script paths resolve via `_paths.R` and `01_itt_cohort_selection.py`'s root resolver; see `COHORT_SELECTION.md` for the regeneration workflow.
 
 ## Pipeline order
 
+The pipeline runs in numbered phases. Phase numbers correspond to file prefixes.
+
 ```
-01 → 03a → 03 → 04                (tables + MI models)
-01 → 30c, 32b                     (target-trial CSVs for Figure 3)
-01 → 50a → 50, 51, 52             (figures)
-→ make_results_html.py            (bundles everything into one HTML)
+00 → 01                                   data cleaning + cohort selection
+01 → 02                                   Table 1
+01 → 03a → 03                             within-LTFU multivariable (MI + Cox + Fine-Gray)
+01 → 05–28                                descriptive + g-formula + mediation + landmark
+01 → 30d, 30i, 30j, 32d, 32f              target-trial: grace, cause-specific, period, subgroups, resistance
+01 → 55, 55b, 55c                         baseline composition at landmark (SMD + Love + PS-weighted)
+01 → 56, 56b                              within-LTFU return-stratified mortality
+01 → 57, 57b, 57c                         IPCW + Bayesian Cox for return-to-care mediation
+01 → 58, 58b                              g-computation counterfactual for returners
+01 → 59                                   severity-stratified on-treatment mortality
+01 → 60                                   competing-risks framing
+01 → 61                                   corrected multi-source DR classifier
+01 → 50, 50a, 51, 52, 53, 54              figures 1–5
 ```
 
-Running `make_results_html.py` produces `TB_Abandonment_Results_YYYY-MM-DD.html` on the Desktop — a self-contained report with base64-embedded figures.
+## Key methodological choices
 
-## Documentation
-- `COHORT_SELECTION.md` — cohort definition, inclusion/exclusion, time variables, and regeneration workflow
-- `CLAUDE.md` — agent / collaborator guidance (where data lives, common pitfalls, what not to do)
-- `ITT_Analysis/README_FINAL.md` — pipeline-level README
+- **Time origin:** sequential target-trial emulation with a symmetric 30-day grace period at each monthly landmark, addressing immortal-time bias from both treatment-start and treatment-completion anchoring.
+- **Confounding adjustment:** 13 baseline covariates (age, sex, race, education, HIV, DOT, alcohol, drug use, incarceration, homelessness, hospitalisation, clinical form, diabetes), with multiple imputation by miceforest (5 datasets) and Rubin's-rules pooling.
+- **Return-to-care:** treated as an informative mediator. We report ITT (return not censored), naive return-censored, and IPCW-corrected estimands.
+- **Cause-of-death attribution:** hybrid SIM ICD-10 + TBweb `case_outcome` for primary; SIM-only for sensitivity.
+- **Drug-resistance:** corrected multi-source classifier (phenotypic SINAN + Xpert/rifasens + isoniazid) in `61_build_dr_status_corrected.py`. The historical `dr_status_lookup.csv` was reclassifying culture-positive-but-DST-untested patients as Sensitive and is superseded.
+
+## Reproducibility
+
+All scripts read from `$PROJECT_ROOT` (Google Drive mount in our setup) and write to `$PROJECT_ROOT/ITT_Analysis/results/`. To reproduce on a new machine:
+1. Set the environment variable `TB_ABANDONMENT_ROOT` to your project root.
+2. Place `Data/Final_table_cleaned.csv` (cleaned SINAN+SIM linkage) and `Data/death_dates.csv` at the expected locations.
+3. Run `01_itt_cohort_selection.py` to build the cohort.
+4. Run the phase scripts in numbered order. Most phases are independent given the cohort and the 5 MI datasets.
 
 ## Dependencies
-- **R**: `survival`, `dplyr`, `broom`, `survivalROC`
-- **Python >= 3.9**: `pandas`, `numpy`, `matplotlib`, `python-docx`
 
-## Citation / Contact
-Evelyn Lepka de Lima and Jason Andrews
-Analysis finalized April 2026.
+**R (≥ 4.5):** `survival`, `cmprsk`, `dplyr`, `mice`, `brms`, `ggplot2`, `patchwork`, `scales`, `broom`
+
+**Python (≥ 3.9):** `pandas`, `numpy`, `scipy`, `statsmodels`, `lifelines`, `miceforest`, `matplotlib`, `python-docx`
+
+## Authors and contact
+
+Evelyn Lepka de Lima, Jason Andrews, and colleagues.
+
+For questions: `jasonandr@stanford.edu`.
