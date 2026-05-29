@@ -48,13 +48,15 @@ if (!file.exists(alluvial_png)) {
                alluvial_png))
 }
 img_raster <- png::readPNG(alluvial_png)
-pA <- ggplot() +
+# Reordered to put rainclouds first (A-C) and alluvial last (D),
+# matching the citation order in the main text.
+pD <- ggplot() +
   annotation_custom(rasterGrob(img_raster, interpolate = TRUE,
                                width = unit(1, "npc"),
                                height = unit(1, "npc")),
                     xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
   theme_void() +
-  labs(title = "A. TB trajectories after loss to follow-up") +
+  labs(title = "D. TB trajectories after loss to follow-up") +
   theme(plot.title = element_text(face = "bold", size = 13,
                                   margin = margin(b = 4)))
 
@@ -104,33 +106,29 @@ build_raincloud <- function(df, x_var, x_label, title_text, fill_color,
           panel.grid.major.y = element_blank())
 }
 
-pR1 <- build_raincloud(df_aband, "abandon_months",
+pA <- build_raincloud(df_aband, "abandon_months",
                        "Months from treatment start",
-                       sprintf("B.i  Timing of loss to follow-up (N = %s)",
+                       sprintf("A. Timing of loss to follow-up (N = %s)",
                                scales::comma(nrow(df_aband))),
                        "#e74c3c", c(0, 6), 0:6, " mo")
-pR2 <- build_raincloud(df_retx, "time_rn",
+pB <- build_raincloud(df_retx, "time_rn",
                        "Years since LTFU",
-                       sprintf("B.ii  Time to retreatment (N = %s)",
+                       sprintf("B. Time from LTFU to retreatment (N = %s)",
                                scales::comma(nrow(df_retx))),
                        "#f1c40f", c(0, 12), seq(0, 12, 2), " yr")
-pR3 <- build_raincloud(df_death, "time_d",
+pC <- build_raincloud(df_death, "time_d",
                        "Years since LTFU",
-                       sprintf("B.iii  Time to mortality (N = %s)",
+                       sprintf("C. Time from LTFU to mortality (N = %s)",
                                scales::comma(nrow(df_death))),
                        "#2c3e50", c(0, 12), seq(0, 12, 2), " yr")
 
-panelB <- pR1 / pR2 / pR3 +
-  plot_annotation(title = "B. Event timing among abandoners",
-                  theme = theme(plot.title = element_text(face = "bold",
-                                                           size = 13)))
-
 # ---------------------------------------------------------------------------
-# Compose — A on left (alluvial, wider ~1.2:1 aspect), B three rainclouds
-# stacked vertically on the right
+# Compose: three rainclouds (A, B, C) stacked on the left in citation order,
+# then alluvial (D) on the right. Matches the main-text citation sequence
+# (Fig 1b first, then C, D, A).
 # ---------------------------------------------------------------------------
-fig1 <- pA | (pR1 / pR2 / pR3) +
-  plot_layout(widths = c(1.3, 1)) +
+fig1 <- (pA / pB / pC) | pD +
+  plot_layout(widths = c(1, 1.3)) +
   plot_annotation(
     theme = theme(plot.background = element_rect(fill = "white", color = NA))
   )

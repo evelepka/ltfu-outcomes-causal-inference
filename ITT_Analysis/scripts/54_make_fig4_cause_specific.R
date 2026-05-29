@@ -30,6 +30,9 @@ source(file.path(.here(), "_paths.R"))
 
 OUT_PNG <- file.path(ITT_RESULTS_DIR, "Figure_4_cause_specific.png")
 OUT_PDF <- file.path(ITT_RESULTS_DIR, "Figure_4_cause_specific.pdf")
+# Appendix sensitivity (SIM-only) goes out separately so the main figure is panel-A only
+OUT_APP_PNG <- file.path(ITT_RESULTS_DIR, "Figure_S_cause_specific_simonly.png")
+OUT_APP_PDF <- file.path(ITT_RESULTS_DIR, "Figure_S_cause_specific_simonly.pdf")
 
 cs_path <- file.path(ITT_RESULTS_DIR, "target_trial_defnB_cause_specific.csv")
 if (!file.exists(cs_path)) stop(sprintf("Missing %s (run 30i)", cs_path))
@@ -69,27 +72,43 @@ mk_panel <- function(df_panel, title, subtitle, c_tb, c_ntb) {
 }
 
 pA <- mk_panel(cs,
-               "A. Hybrid attribution (SIM ICD-10 + TBweb Obito) — primary",
-               "TB-cause aHR (red) vs non-TB aHR (blue); late mortality 6–24 mo from disengagement",
+               "Hybrid attribution (SIM ICD-10 + TBweb Obito) primary",
+               "TB-cause aHR (red) vs non-TB aHR (blue); late mortality 6 to 24 months from disengagement",
                "tb_hybrid", "nontb_hybrid")
 
 pB <- mk_panel(cs,
-               "B. SIM-only attribution (uniform across arms) — sensitivity",
+               "SIM-only attribution (uniform across arms) sensitivity",
                "Restricted to deaths with SIM ICD-10 codes; same trials, same covariates",
                "tb_simonly", "nontb_simonly")
 
-fig4 <- pA / pB +
-  plot_layout(heights = c(1, 1)) +
+# Main manuscript Figure 5: Panel A (hybrid attribution) only
+fig_main <- pA +
   plot_annotation(
-    title = "Figure 4. Cause-specific mortality after disengagement",
-    subtitle = "Sequential target-trial emulation, MI-pooled; defn-B + grace eligibility. The TB-cause hazard ratio (red) rising sharply across trial months while the non-TB negative-control hazard (blue) remains near unity supports a causal interpretation: the LTFU effect is mediated through interrupted TB therapy rather than purely confounded by social/clinical predictors of disengagement.",
+    title = "Figure 5. Cause-specific mortality after disengagement",
+    subtitle = "Sequential target-trial emulation, MI-pooled, with defn-B + grace eligibility. The TB-cause hazard ratio (red) rising sharply across trial months while the non-TB negative-control hazard (blue) remains near unity supports a causal interpretation: the LTFU effect is mediated through interrupted TB therapy rather than purely confounded by social/clinical predictors of disengagement.",
     theme = theme(plot.background = element_rect(fill = "white", color = NA),
                   plot.title = element_text(face = "bold", size = 14),
                   plot.subtitle = element_text(size = 9.5, color = "grey25",
                                                margin = margin(b = 8)))
   )
 
-ggsave(OUT_PNG, fig4, width = 11, height = 9, dpi = 300, bg = "white")
-ggsave(OUT_PDF, fig4, width = 11, height = 9, bg = "white")
-cat(sprintf("[fig4] Wrote %s\n", OUT_PNG))
-cat(sprintf("[fig4] Wrote %s\n", OUT_PDF))
+ggsave(OUT_PNG, fig_main, width = 11, height = 6, dpi = 300, bg = "white")
+ggsave(OUT_PDF, fig_main, width = 11, height = 6, bg = "white")
+cat(sprintf("[fig5-main] Wrote %s\n", OUT_PNG))
+cat(sprintf("[fig5-main] Wrote %s\n", OUT_PDF))
+
+# Appendix figure: Panel B (SIM-only attribution sensitivity)
+fig_app <- pB +
+  plot_annotation(
+    title = "Figure S. SIM-only attribution sensitivity for cause-specific mortality",
+    subtitle = "Same target-trial emulation as Figure 5, restricted to deaths with available SIM ICD-10 codes",
+    theme = theme(plot.background = element_rect(fill = "white", color = NA),
+                  plot.title = element_text(face = "bold", size = 14),
+                  plot.subtitle = element_text(size = 9.5, color = "grey25",
+                                               margin = margin(b = 8)))
+  )
+
+ggsave(OUT_APP_PNG, fig_app, width = 11, height = 6, dpi = 300, bg = "white")
+ggsave(OUT_APP_PDF, fig_app, width = 11, height = 6, bg = "white")
+cat(sprintf("[fig5-app]  Wrote %s\n", OUT_APP_PNG))
+cat(sprintf("[fig5-app]  Wrote %s\n", OUT_APP_PDF))
