@@ -48,16 +48,14 @@ if (!file.exists(alluvial_png)) {
                alluvial_png))
 }
 img_raster <- png::readPNG(alluvial_png)
-# Reordered to put rainclouds first (A-C) and alluvial last (D),
-# matching the citation order in the main text.
-pD <- ggplot() +
+pA <- ggplot() +
   annotation_custom(rasterGrob(img_raster, interpolate = TRUE,
                                width = unit(1, "npc"),
                                height = unit(1, "npc")),
                     xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
   theme_void() +
-  labs(title = "D. TB trajectories after loss to follow-up") +
-  theme(plot.title = element_text(face = "bold", size = 13,
+  labs(title = "A. TB trajectories after LTFU") +
+  theme(plot.title = element_text(face = "bold", size = 15,
                                   margin = margin(b = 4)))
 
 # Still compute caption stats for the side CSV
@@ -95,40 +93,39 @@ build_raincloud <- function(df, x_var, x_label, title_text, fill_color,
     annotate("text",
              x = med_val, y = max_d * 1.05,
              label = sprintf("median = %.2f%s", med_val, median_suffix),
-             hjust = -0.05, size = 3.2, fontface = "italic") +
+             hjust = -0.05, size = 4.0, fontface = "italic") +
     scale_x_continuous(limits = x_limits, breaks = x_breaks) +
     labs(title = title_text, x = x_label, y = NULL) +
-    theme_minimal(base_size = 11) +
-    theme(plot.title = element_text(face = "bold", size = 11),
+    theme_minimal(base_size = 13) +
+    theme(plot.title = element_text(face = "bold", size = 13),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           panel.grid.minor = element_blank(),
           panel.grid.major.y = element_blank())
 }
 
-pA <- build_raincloud(df_aband, "abandon_months",
+pR1 <- build_raincloud(df_aband, "abandon_months",
                        "Months from treatment start",
-                       sprintf("A. Timing of loss to follow-up (N = %s)",
+                       sprintf("B. Timing of LTFU (N = %s)",
                                scales::comma(nrow(df_aband))),
-                       "#e74c3c", c(0, 6), 0:6, " mo")
-pB <- build_raincloud(df_retx, "time_rn",
+                       "#e74c3c", c(0, 6), 0:6, " months")
+pR2 <- build_raincloud(df_retx, "time_rn",
                        "Years since LTFU",
-                       sprintf("B. Time from LTFU to retreatment (N = %s)",
+                       sprintf("C. Time to retreatment (N = %s)",
                                scales::comma(nrow(df_retx))),
-                       "#f1c40f", c(0, 12), seq(0, 12, 2), " yr")
-pC <- build_raincloud(df_death, "time_d",
+                       "#f1c40f", c(0, 12), seq(0, 12, 2), " years")
+pR3 <- build_raincloud(df_death, "time_d",
                        "Years since LTFU",
-                       sprintf("C. Time from LTFU to mortality (N = %s)",
+                       sprintf("D. Time to death (N = %s)",
                                scales::comma(nrow(df_death))),
-                       "#2c3e50", c(0, 12), seq(0, 12, 2), " yr")
+                       "#2c3e50", c(0, 12), seq(0, 12, 2), " years")
 
 # ---------------------------------------------------------------------------
-# Compose: three rainclouds (A, B, C) stacked on the left in citation order,
-# then alluvial (D) on the right. Matches the main-text citation sequence
-# (Fig 1b first, then C, D, A).
+# Compose — A on left (alluvial, wider ~1.2:1 aspect), B three rainclouds
+# stacked vertically on the right
 # ---------------------------------------------------------------------------
-fig1 <- (pA / pB / pC) | pD +
-  plot_layout(widths = c(1, 1.3)) +
+fig1 <- pA | (pR1 / pR2 / pR3) +
+  plot_layout(widths = c(1.3, 1)) +
   plot_annotation(
     theme = theme(plot.background = element_rect(fill = "white", color = NA))
   )

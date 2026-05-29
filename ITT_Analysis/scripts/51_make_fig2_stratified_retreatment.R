@@ -140,11 +140,7 @@ pD <- make_panel(
 # --- Compose ---------------------------------------------------------------
 fig2 <- (pA | pB) / (pC | pD) +
   plot_annotation(
-    title = "Cumulative incidence of retreatment after loss to follow-up, by subgroup",
-    subtitle = sprintf("Aalen-Johansen estimates with death as competing risk; LTFU subgroup N = %d",
-                       nrow(ltfu)),
-    theme = theme(plot.title = element_text(face = "bold", size = 14),
-                  plot.subtitle = element_text(size = 11))
+    theme = theme(plot.background = element_rect(fill = "white", color = NA))
   )
 
 ggsave(OUT_PNG, fig2, width = 12, height = 10, dpi = 300, bg = "white")
