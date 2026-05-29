@@ -20,41 +20,27 @@ df["sex"] = df["sex"].fillna("Missing")
 df["age_group"] = pd.cut(df["age_tb"], bins=[14, 24, 44, 64, 150], labels=["15-24", "25-44", "45-64", "≥ 65"])
 
 df["hiv_aids"] = df["hiv_aids"].fillna("Missing")
-df["incarceration"] = df["incarceration"].fillna("Missing")
+# 2026-05-29: cohort uses these column names; map old→new
+df["incarceration"] = df["incarcerated"].fillna("Missing")
 df["homelessness"] = df["homelessness"].fillna("Missing")
-df["supervised_therapy"] = df["supervised_therapy"].fillna("Missing")
+df["supervised_therapy"] = df["dot_status"].fillna("Missing")
 df["alcohol"] = df["alcohol"].fillna("Missing")
-df["drug_use_stat"] = df["drug_use_stat"].fillna("Missing")
+df["drug_use_stat"] = df["drug_use"].fillna("Missing")
 df["tobacco_stat"] = df["tobacco_use"].fillna("Missing")
 df["diabetes"] = df["diabetes"].fillna("Missing")
 df["mental"] = df["mental_health"].fillna("Missing")
 df["immuno"] = df["other_immuno_condition"].fillna("Missing")
 
-def clinc_map(c):
-    if c in ["Pul", "Pulmonary"]: return "Pulmonary"
-    if c in ["Ext", "Extrapulmonary"]: return "Extrapulmonary"
-    if c in ["P+E", "Dissem", "Pulm+Extra/Dissem", "Pulmonary and Extrapulmonary or disseminated"]: return "Pulm+Extra/Dissem"
-    return "Missing"
-df["clinical_clean"] = df["clinical_classif"].apply(clinc_map)
+# clinical_clean is already cleaned in the new cohort CSV
+df["clinical_clean"] = df["clinical_clean"].fillna("Missing")
 
 df["diagnosis_clean"] = df["diagnosis_setting"].fillna("Missing")
 df["lab_confirmed_stat"] = df["lab_confirmed_stat"].fillna("Missing")
 df["hosp_admission_stat"] = df["hosp_admission"].fillna("Missing")
 
-def race_map(r):
-    if r == "Branco" or r == "White": return "White"
-    if r in ["Pardo", "Preto", "Black or Mixed"]: return "Black or Mixed"
-    if r in ["Amarelo", "Indigena", "Indigenous or Asian", "Other"]: return "Indigenous or Asian"
-    return "Missing"
-df["race_clean"] = df["race"].apply(race_map)
-
-def edu_map(e):
-    if e in ["De 1 a 3 anos", "De 4 a 7 anos", "≤ 7 years"]: return "≤ 7 years"
-    if e in ["De 8 a 11 anos", "8 - 11 years"]: return "8 - 11 years"
-    if e in ["De 12 a 14 anos", "15 anos e mais", "≥ 12 years"]: return "≥ 12 years"
-    if e in ["Nenhuma", "None"]: return "None"
-    return "Missing"
-df["education_clean"] = df["education"].apply(edu_map)
+# race_clean and edu_clean are already cleaned in the new cohort CSV
+df["race_clean"] = df["race_clean"].fillna("Missing")
+df["education_clean"] = df["edu_clean"].fillna("Missing")
 
 # Split Groups
 g_aband = df[df["itt_group"] == "Loss to follow-up"]
