@@ -253,20 +253,6 @@ hr_homeless = tt_subgrp_fmt_defnB("homelessness", "Yes")
 tb_m4    = cause_fmt(4, "tb_hybrid")
 nontb_m4 = cause_fmt(4, "nontb_hybrid")
 
-# Range of late cause-specific aHRs across trial months 1–6 (cap=2; hybrid)
-def _cause_hr(month, cause, cap=2):
-    r = cause_defnB[(cause_defnB["Trial_Month"] == f"Month_{month}") &
-                    (cause_defnB["cause"] == cause) &
-                    (cause_defnB["cap"] == cap)]
-    if r.empty:
-        return None
-    return float(r.iloc[0]["HR"])
-
-_tb_hrs    = [h for h in (_cause_hr(m, "tb_hybrid")    for m in range(1, 7)) if h]
-_nontb_hrs = [h for h in (_cause_hr(m, "nontb_hybrid") for m in range(1, 7)) if h]
-tb_min, tb_max       = min(_tb_hrs),    max(_tb_hrs)
-nontb_min, nontb_max = min(_nontb_hrs), max(_nontb_hrs)
-
 ltfu = cohort[cohort["itt_group"] == "Loss to follow-up"].copy()
 ltfu["died_5y"] = (ltfu["event_d"] == 1) & (ltfu["time_d"] <= 5)
 pct_5y_mort = 100 * ltfu["died_5y"].sum() / len(ltfu)
@@ -317,10 +303,9 @@ add_para(
     f"(range across Months 1–6: aHR {hr_min:.2f}–{hr_max:.2f}; "
     f"6–24 months from disengagement). The cause-specific contrast "
     f"showed substantially larger effects on TB-attributable mortality "
-    f"(range across Months 1–6: aHR {tb_min:.2f}–{tb_max:.2f}) than on "
-    f"non-TB mortality (aHR {nontb_min:.2f}–{nontb_max:.2f}), supporting "
-    f"a causal interpretation mediated through interrupted therapy. "
-    f"The relative late-mortality penalty "
+    f"(Month 4 aHR {tb_m4}) than on non-TB mortality "
+    f"(aHR {nontb_m4}), supporting a causal interpretation mediated "
+    f"through interrupted therapy. The relative late-mortality penalty "
     f"was greatest in younger individuals (age 15–24 aHR {hr_15_24} "
     f"vs. ≥65 aHR {hr_65p}) and in housed compared with structurally "
     f"homeless individuals (aHR {hr_housed} vs. {hr_homeless})."
@@ -514,15 +499,7 @@ add_para(
     "months). Estimates are reported as adjusted hazard ratios (aHR) or "
     "adjusted subdistribution hazard ratios (aSHR) with 95% confidence "
     "intervals, pooled across the five imputed datasets using Rubin's "
-    "rules. These within-LTFU analyses use treatment duration measured "
-    "from treatment start to the recorded end_date (the Brazilian "
-    "programmatic LTFU declaration), not the defn-B 30-day shift; the "
-    "shift is applied only to LTFU-vs-non-LTFU contrasts (Figures 3, 4), "
-    "where it addresses the asymmetric classification timing between "
-    "arms. The 30-day grace-period landmark is also unnecessary here "
-    "because LTFU classification by definition requires ≥30-day "
-    "post-disengagement survival, so the within-LTFU sample already "
-    "satisfies that filter structurally."
+    "rules."
 )
 
 add_heading("Crude time-varying hazard ratio (illustrative)", level=2)
@@ -614,23 +591,7 @@ add_para(
     "examining whether the LTFU penalty changed across the COVID-19 "
     "transition. Late-mortality estimates under all sensitivity "
     "specifications fell within 10–15% of the primary defn-B + grace "
-    "estimates. We additionally examined two descriptive sensitivity "
-    "questions concerning ascertainment and case-mix: (5) calendar-year "
-    "trends in LTFU incidence and in 1- and 2-year per-LTFU-patient "
-    "outcomes (mortality and retreatment) across 2013–2022, including "
-    "the COVID-19 transition; and (6) LTFU rates stratified by a "
-    "multi-source drug-resistance classification (rifampin-resistant "
-    "or multidrug-resistant; isoniazid-monoresistant; drug-sensitive; "
-    "not evaluated) combining Xpert MTB/RIF, the SINAN drug-"
-    "susceptibility-testing summary, and rifampin- and isoniazid-"
-    "specific DST results. Results for both descriptive sensitivity "
-    "analyses are reported in Appendix B. (7) We additionally repeated "
-    "the primary target-trial emulation in the complete-case subset "
-    "(N=110,456; 64.0% of the full cohort), restricted to individuals "
-    "with non-missing data for all 13 covariates; most missingness was "
-    "concentrated in education (25.5%) and race (13.4%), with all other "
-    "covariates ≤ 7.4% missing. Complete-case results are reported in "
-    "Appendix B, Table B4."
+    "estimates."
 )
 
 add_heading("Descriptive analyses and stratified cumulative incidence",
@@ -887,51 +848,6 @@ add_para(
     f"COVID-era disruption."
 )
 
-add_heading("Calendar-year and drug-resistance sensitivity analyses",
-            level=2)
-add_para(
-    "In a calendar-year sensitivity analysis (Appendix B, Table B1), "
-    "annual LTFU incidence rose from approximately 10% in 2013–2018 to "
-    "approximately 15% in 2020–2022, while 1- and 2-year per-patient "
-    "outcomes among LTFU were stable across the period (mortality ≈2–3% "
-    "and 4–5%; retreatment ≈30% and 37%; Appendix B, Table B2), with "
-    "no detectable COVID-era change at the per-patient level. In a "
-    "drug-resistance sensitivity analysis (Appendix B, Table B3), LTFU "
-    "rates were highest among patients with rifampin-resistant or "
-    "multidrug-resistant TB (20.4%, 95% CI 18.5–22.5) compared with "
-    "isoniazid-monoresistant (15.6%, 13.4–18.0) and drug-sensitive "
-    "disease (16.4%, 16.1–16.7), and lowest among patients without DST "
-    "results (9.7%, 9.6–9.9), consistent with differential ascertainment "
-    "rather than a true protective effect."
-)
-
-add_heading("Complete-case sensitivity", level=2)
-try:
-    cc = pd.read_csv(RESULTS / "target_trial_defnB_cc_early_late_array.csv")
-    cc_late = cc[(cc["model"] == "late") & (cc["cap"] == 2)]
-    cc_n = int(cc_late["N"].max()) if len(cc_late) else None
-    cc_min, cc_max = float(cc_late["HR"].min()), float(cc_late["HR"].max())
-    cc_cs = pd.read_csv(RESULTS / "target_trial_defnB_cc_cause_specific.csv")
-    cc_tb = cc_cs[cc_cs["cause"] == "tb_hybrid"]
-    cc_ntb = cc_cs[cc_cs["cause"] == "nontb_hybrid"]
-    add_para(
-        f"In the complete-case sensitivity analysis (Appendix B, Table B4), "
-        f"late-window aHRs across trial months 1–6 ranged from "
-        f"{cc_min:.2f} to {cc_max:.2f} (vs. {hr_min:.2f}–{hr_max:.2f} in the "
-        f"multiple-imputation primary), with overlapping confidence intervals "
-        f"at every trial month. The cause-specific TB-vs-non-TB contrast was "
-        f"preserved: TB-attributable aHRs ranged from {cc_tb['HR'].min():.2f} "
-        f"to {cc_tb['HR'].max():.2f} across trial months, compared with "
-        f"{cc_ntb['HR'].min():.2f}–{cc_ntb['HR'].max():.2f} for non-TB "
-        f"mortality. Conclusions are insensitive to the imputation."
-    )
-except FileNotFoundError:
-    add_para(
-        "Complete-case sensitivity analysis pending — run 30m to populate "
-        "target_trial_defnB_cc_*.csv.",
-        italic=True
-    )
-
 
 # ==========================================================================
 # Discussion (outline)
@@ -976,11 +892,6 @@ add_bullets([
     "Effect modification by age and housing highlights where "
     "interventions will have the highest relative impact, and where "
     "absolute burden demands parallel structural investment.",
-    "Differential return-to-treatment (sicker patients more likely to "
-    "re-engage; Figure 5) dilutes the LTFU exposure preferentially "
-    "among the highest-risk individuals, making the intention-to-treat "
-    "estimates a lower bound on the on-treatment effect of sustained "
-    "LTFU.",
 ])
 
 add_heading("3. Comparison with prior literature", level=2)
@@ -1045,12 +956,7 @@ add_heading("7. Conclusions", level=2)
 add_para(
     "Less than half of individuals lost to follow-up during a first "
     "tuberculosis episode returned to care, and those who did had more "
-    "severe baseline disease. Because retreatment was concentrated "
-    "among the most severely ill, the intention-to-treat estimates "
-    "reported here are a lower bound on the on-treatment effect of "
-    "sustained LTFU; the cause-specific TB-attributable separation, "
-    "in particular, is likely an under-estimate of the biological "
-    "effect of interrupted therapy. Once classical immortal-time bias and "
+    "severe baseline disease. Once classical immortal-time bias and "
     "the classification asymmetry of the 30-day LTFU rule were "
     "addressed under a symmetric grace-period target-trial design, "
     "LTFU at any month of therapy carried an approximately 2–3-fold "
@@ -1305,19 +1211,11 @@ add_heading("Appendix A. Definition-A sensitivity analyses", level=1)
 
 add_heading("A.1 Background and motivation", level=2)
 add_para(
-    "TBweb closes an Abandono case using a date determined by "
-    "programmatic rule rather than by direct observation of the "
-    "patient. The TBweb operations manual specifies: \"Abandono — "
-    "registrar a data em que o doente completou 30 dias consecutivos "
-    "sem uso de medicação\" (\"register the date the patient "
-    "completed 30 consecutive days without medication\"; São Paulo "
-    "State TB Programme, personal communication, S. Akemi, 2026). "
-    "The recorded data_de_encerramento is therefore set on or after "
-    "the first missed scheduled appointment, typically ≥30 days "
-    "(with practical variability up to 50+ days) after the patient's "
-    "actual last visit or last medication intake. Two interpretations "
-    "of this field are nonetheless defensible without the manual "
-    "quotation:"
+    "TBweb's case-closure date (data_de_encerramento) for an Abandono "
+    "case is recorded ≥30 days after the patient's actual last visit "
+    "or last medication intake — the system enforces a 30-day waiting "
+    "period before allowing closure (90 days for Abandono primário). "
+    "Two interpretations of this field are defensible:"
 )
 add_bullets([
     "Definition A: end_date is the date of the patient's last visit. "
@@ -1325,9 +1223,9 @@ add_bullets([
     "period before retrospective classification, but the date itself "
     "is set to the last actual contact.",
     "Definition B (primary): end_date is the case-closure date, "
-    "approximately 30 days after the patient's actual last visit. "
-    "Under this reading the actual disengagement date is "
-    "end_date − 30 days.",
+    "approximately 30 days (with variability up to 50+ days) after "
+    "the patient's actual last visit. Under this reading the actual "
+    "disengagement date is end_date − 30 days.",
 ])
 add_para(
     "The empirical distribution of `end_date − best_start` shows "
@@ -1335,33 +1233,10 @@ add_para(
     "scheduling under either interpretation) and a sharp threshold "
     "at day 30 (sharper than would arise under Defn-A alone), with "
     "approximately 4% of Abandono cases having recorded duration <30 "
-    "days. The TBweb manual quotation above and direct confirmation "
-    "from the São Paulo TB programme establish Definition B as the "
-    "canonical convention. We adopt Defn-B as primary and present "
-    "Defn-A here as a sensitivity bracket."
-)
-add_para(
-    "Several administrative regime changes affect interpretation of "
-    "the closure code over our 2013–2023 study window. (i) Since "
-    "2010, any new TB treatment in a patient with a prior cure has "
-    "been classified as recidiva, and any new treatment after a "
-    "prior abandono as retratamento pós-abandono, regardless of the "
-    "elapsed interval — so our \"Novo\" filter selects on a "
-    "consistent post-2010 case-classification regime. (ii) The "
-    "closure code Abandono primário was created in TBweb in 2016 to "
-    "distinguish patients who never engaged with treatment from "
-    "those who interrupted after starting; pre-2016 cases that would "
-    "now be coded primário were coded Abandono. (iii) From "
-    "approximately 2024, TBweb no longer permits Abandono in the "
-    "first month of treatment and requires Primário for those "
-    "early-disengagement cases. The current Primário rule has two "
-    "branches: when a tx_start date is recorded, closure as Primário "
-    "is permitted only during the first month of treatment; when no "
-    "tx_start is recorded (diagnosis confirmed but treatment never "
-    "initiated), closure as Primário is permitted only ≥90 days "
-    "after notification. Historical records pre-dating these "
-    "enforcement rules retain heterogeneous coding, which we account "
-    "for descriptively in §A.6."
+    "days (data-entry edge cases). Confirmation from the São Paulo "
+    "TB programme indicates the canonical convention is Definition B "
+    "with practical variability of 30–50+ days. We adopt Defn-B as "
+    "primary and present Defn-A here as a sensitivity bracket."
 )
 
 add_heading("A.2 What changes between definitions", level=2)
@@ -1509,136 +1384,15 @@ add_para(
     "target_trial_resistance_grace_mi, target_trial_period_grace_mi)."
 )
 
-add_heading("A.6 Sub-label composition: Abandono vs. Abandono primário",
-            level=2)
-add_para(
-    "The LTFU exposure pool is defined as case_outcome ∈ {Abandono, "
-    "Abandono Primário, Faltoso}. In our 2013–2023 cohort the LTFU "
-    "arm comprises 21,619 individuals: 20,454 Abandono (94.6%), "
-    "1,165 Abandono primário (5.4%), and 0 Faltoso (the latter is a "
-    "deprecated code retained in the inclusion set for completeness). "
-    "Two empirical patterns merit explicit comment."
-)
-add_para(
-    "First, the 2016 introduction of Primário as a distinct closure "
-    "code is visible as a sharp boundary in sub-label composition. "
-    "In 2013–2015, only 25 records (≤1% of LTFU each year) were "
-    "coded Primário; from 2016 onward, Primário accounts for 5–9% "
-    "of LTFU records each year, with no further trend across the "
-    "post-2016 years. Total LTFU incidence rises across the period "
-    "(reported in Appendix B), but this rise is not driven by the "
-    "code's introduction — Abandono itself rises in parallel, and "
-    "the pre-2016 absence of a Primário option meant that "
-    "early-disengagement cases were coded Abandono rather than "
-    "excluded from LTFU."
-)
-add_para(
-    "Second, among the 1,165 Primário cases, 788 (67.6%) have no "
-    "recorded tx_start date. These represent diagnosed-but-never-"
-    "engaged patients per the Primário rule (closure ≥90 days after "
-    "notification when treatment was never initiated): empirically, "
-    "96.8% of this no-tx_start subgroup have notification-to-closure "
-    "intervals ≥90 days, confirming Sueli's account. The remaining "
-    "3.2% are pre-rule-enforcement historical records. The "
-    "no-tx_start subgroup constitutes 3.6% of the LTFU arm and 0.46% "
-    "of the full ITT cohort. Because tx_start is missing for these "
-    "patients, our cohort-construction proxy "
-    "(best_start = tx_start.fillna(diagnostic_date).fillna("
-    "notification_date)) assigns them a synthetic time origin and "
-    "they enter the LTFU arm with non-trivial recorded \"treatment "
-    "duration\" (median 249 days under the proxy) despite never "
-    "having received TB therapy."
-)
-add_para(
-    "Conceptually, the no-tx_start Primário subgroup is distinct "
-    "from the rest of the LTFU arm: rather than disengaging from "
-    "an active treatment course, these individuals never began "
-    "therapy. Including them in an LTFU-vs-on-treatment causal "
-    "contrast assigns them to an exposure they did not receive. "
-    "We retain them in the primary analysis because the subgroup is "
-    "small (0.46% of cohort) and the Brazilian programmatic "
-    "definition of LTFU explicitly subsumes these individuals — an "
-    "analysis that excluded them would be inconsistent with the "
-    "policy-relevant exposure definition. Defn-B's clamp of "
-    "true_tx_duration ≥ 1 day additionally places these patients in "
-    "the leftmost trial-month bucket, where the grace-period "
-    "landmark and the selection-driven attenuation in the early "
-    "window discount them most heavily. As a direct empirical check, "
-    "we refit the defn-B target trial after excluding the 733 "
-    "no-tx_start Primário cases retained in the imputed datasets "
-    "(Table A3). Late-mortality aHRs (cap = 24 months) shifted by "
-    "0.2–5.5% across trial months relative to the primary, with no "
-    "systematic direction; 95% confidence intervals overlapped "
-    "heavily; and the trial-month pattern (peak at Month 4, "
-    "decline thereafter) was preserved. The conclusions of the "
-    "primary defn-B analysis are therefore insensitive to the "
-    "treatment of the never-engaged Primário subgroup."
-)
-
-# Table A3: defn-B primary vs no-tx-Primario-excluded sensitivity
-excl = pd.read_csv(RESULTS / "target_trial_defnB_excl_primario_no_tx.csv")
-
-def _fmt_excl(df, mon, model="late", cap=2):
-    r = df[(df["Trial_Month"] == f"Month_{mon}")
-           & (df["model"] == model) & (df["cap"] == cap)]
-    if r.empty:
-        return "—"
-    row = r.iloc[0]
-    return f"{row['HR']:.2f} ({row['CI_L']:.2f}–{row['CI_H']:.2f})"
-
-tA3 = doc.add_table(rows=1, cols=4)
-tA3.style = "Table Grid"
-hdr = tA3.rows[0].cells
-hdr[0].text = "Trial month"
-hdr[1].text = "Defn-B primary"
-hdr[2].text = "Excl. no-tx Primário"
-hdr[3].text = "Δ (%)"
-for cell in hdr:
-    cell.paragraphs[0].runs[0].bold = True
-for mon in range(1, 7):
-    cells = tA3.add_row().cells
-    cells[0].text = f"Month {mon}"
-    cells[1].text = _fmt_row(tt_array_defnB, mon)
-    cells[2].text = _fmt_excl(excl, mon)
-    p_hr = tt_array_defnB[(tt_array_defnB["Trial_Month"] == f"Month_{mon}")
-                         & (tt_array_defnB["model"] == "late")
-                         & (tt_array_defnB["cap"] == 2)]["HR"].iloc[0]
-    e_hr = excl[(excl["Trial_Month"] == f"Month_{mon}")
-               & (excl["model"] == "late")
-               & (excl["cap"] == 2)]["HR"].iloc[0]
-    cells[3].text = f"{100 * (e_hr - p_hr) / p_hr:+.1f}"
-for row in tA3.rows:
-    for cell in row.cells:
-        for para in cell.paragraphs:
-            for run in para.runs:
-                run.font.size = Pt(9)
-
-add_para(
-    "Table A3. Late-mortality (6–24 months from trial origin) MI-pooled "
-    "adjusted hazard ratios (95% CI) for LTFU vs. on-treatment under "
-    "the defn-B primary specification and a sensitivity excluding 733 "
-    "Abandono primário cases without a recorded treatment start date "
-    "(diagnosis-confirmed-but-never-engaged subgroup). Δ is the "
-    "percentage shift in the point estimate relative to the primary.",
-    italic=True, size=9
-)
-
-add_heading("A.7 Bottom line", level=2)
+add_heading("A.6 Bottom line", level=2)
 add_para(
     "All headline conclusions of the manuscript are robust to the "
-    "Defn-A vs. Defn-B choice and to the inclusion of the never-"
-    "engaged Abandono primário subgroup. The two definitions differ "
-    "chiefly in how they label trial-month exposure (an approximate "
-    "one-month relabeling); they produce nearly identical magnitudes "
+    "Defn-A vs. Defn-B choice. The two definitions differ chiefly "
+    "in how they label trial-month exposure (an approximate one-"
+    "month relabeling); they produce nearly identical magnitudes "
     "and patterns for late-mortality aHRs, cause-specific TB-vs-"
     "non-TB contrasts, subgroup effect modification, drug-resistance "
-    "stratification, and calendar-period stability. The LTFU arm "
-    "comprises predominantly Abandono cases (94.6%) with a small "
-    "Primário subset (5.4%, of which two-thirds lack a recorded "
-    "treatment start); excluding this never-engaged subgroup shifts "
-    "late-mortality aHRs by 0.2–5.5% across trial months without "
-    "altering the trial-month pattern or any 95% CI's qualitative "
-    "interpretation (Table A3)."
+    "stratification, and calendar-period stability."
 )
 
 # Appendix figures
@@ -1663,264 +1417,6 @@ add_figure(
     "exceed non-TB hazards across trial months; magnitudes shifted "
     "by one trial-month relative to the primary."
 )
-
-
-# ==========================================================================
-# Appendix B — Calendar-year and drug-resistance sensitivity analyses
-# ==========================================================================
-doc.add_page_break()
-add_heading("Appendix B. Calendar-year and drug-resistance sensitivity "
-            "analyses", level=1)
-
-add_heading("B.1 Calendar-year trends in LTFU incidence and per-patient "
-            "outcomes", level=2)
-add_para(
-    "Calendar-year sensitivity analyses examined whether LTFU incidence "
-    "and outcomes among LTFU patients changed across the 2013–2023 "
-    "study period, including the COVID-19 transition. The 2023 cohort "
-    "was excluded from the per-patient outcome analysis because it is "
-    "right-truncated by the inclusion criterion (end_date ≤ "
-    "2023-12-31), which disproportionately removes patients with "
-    "longer treatment durations and produces apparent rate increases "
-    "that are an artefact of follow-up censoring."
-)
-
-# --- Table B1: LTFU incidence by year ----------------------------------
-year_ltfu_csv = RESULTS / "Tables" / "S_year_ltfu.csv"
-year_outcomes_csv = RESULTS / "Tables" / "S_year_outcomes_ltfu.csv"
-dr_status_csv = RESULTS / "Tables" / "S_dr_status.csv"
-
-if year_ltfu_csv.exists():
-    df_yr_ltfu = pd.read_csv(year_ltfu_csv)
-    tB1 = doc.add_table(rows=1, cols=4)
-    tB1.style = "Table Grid"
-    hdr = tB1.rows[0].cells
-    hdr[0].text = "Year of treatment start"
-    hdr[1].text = "Total cohort"
-    hdr[2].text = "LTFU, n"
-    hdr[3].text = "LTFU % (95% CI)"
-    for cell in hdr:
-        cell.paragraphs[0].runs[0].bold = True
-    for _, r in df_yr_ltfu.iterrows():
-        cells = tB1.add_row().cells
-        cells[0].text = str(int(r["year_start"]))
-        cells[1].text = f"{int(r['n_total']):,}"
-        cells[2].text = f"{int(r['n_ltfu']):,}"
-        cells[3].text = (f"{r['ltfu_pct']:.1f} "
-                         f"({r['ltfu_ci_lo']:.1f}–{r['ltfu_ci_hi']:.1f})")
-    for row in tB1.rows:
-        for cell in row.cells:
-            for para in cell.paragraphs:
-                for run in para.runs:
-                    run.font.size = Pt(9)
-    add_para(
-        "Table B1. Annual cohort size and LTFU incidence, 2013–2023. "
-        "Percentages are within-year proportions of newly initiated "
-        "treatments classified as LTFU; 95% Wilson-score confidence "
-        "intervals.",
-        italic=True, size=9
-    )
-
-# --- Table B2: per-LTFU-patient outcomes by year -----------------------
-if year_outcomes_csv.exists():
-    df_yr_out = pd.read_csv(year_outcomes_csv)
-    tB2 = doc.add_table(rows=1, cols=6)
-    tB2.style = "Table Grid"
-    hdr = tB2.rows[0].cells
-    hdr[0].text = "Year"
-    hdr[1].text = "LTFU n"
-    hdr[2].text = "1y mortality % (95% CI)"
-    hdr[3].text = "2y mortality % (95% CI)"
-    hdr[4].text = "1y retreatment % (95% CI)"
-    hdr[5].text = "2y retreatment % (95% CI)"
-    for cell in hdr:
-        cell.paragraphs[0].runs[0].bold = True
-    for _, r in df_yr_out.iterrows():
-        cells = tB2.add_row().cells
-        cells[0].text = str(int(r["year_start"]))
-        cells[1].text = f"{int(r['n_ltfu']):,}"
-        cells[2].text = (f"{r['mort_1y_pct']:.1f} "
-                         f"({r['mort_1y_lo']:.1f}–{r['mort_1y_hi']:.1f})")
-        cells[3].text = (f"{r['mort_2y_pct']:.1f} "
-                         f"({r['mort_2y_lo']:.1f}–{r['mort_2y_hi']:.1f})")
-        cells[4].text = (f"{r['retreat_1y_pct']:.1f} "
-                         f"({r['retreat_1y_lo']:.1f}–{r['retreat_1y_hi']:.1f})")
-        cells[5].text = (f"{r['retreat_2y_pct']:.1f} "
-                         f"({r['retreat_2y_lo']:.1f}–{r['retreat_2y_hi']:.1f})")
-    for row in tB2.rows:
-        for cell in row.cells:
-            for para in cell.paragraphs:
-                for run in para.runs:
-                    run.font.size = Pt(9)
-    add_para(
-        "Table B2. Per-LTFU-patient 1- and 2-year cumulative mortality "
-        "and retreatment, by calendar year of treatment start, 2013–2022. "
-        "Wilson-score 95% confidence intervals. The 2023 cohort is "
-        "omitted owing to right-truncation by the inclusion criterion "
-        "(end_date ≤ 2023-12-31).",
-        italic=True, size=9
-    )
-
-add_para(
-    "Annual LTFU incidence rose from approximately 10% in 2013–2018 to "
-    "approximately 15% in 2020–2022, with the apparent further rise in "
-    "2023 attributable to the right-truncation of that cohort. By "
-    "contrast, 1- and 2-year per-LTFU-patient mortality (≈2–3% and "
-    "4–5%) and retreatment (≈30% and 37%) were stable across "
-    "2013–2022. There was no detectable COVID-era disruption in "
-    "per-patient outcomes; the public-health impact of the COVID era "
-    "operated through increased LTFU incidence rather than worsened "
-    "outcomes per LTFU event."
-)
-
-add_heading("B.2 Drug-resistance status and LTFU", level=2)
-add_para(
-    "Drug-resistance status was derived as a per-patient hierarchical "
-    "classification combining four raw variables — Xpert MTB/RIF "
-    "result (`tmr_tb`), SINAN drug-susceptibility-testing summary "
-    "(`resistance`), and rifampin- and isoniazid-specific DST results "
-    "(`rifasens`, `isonisens`) — using the precedence rifampin- or "
-    "multidrug-resistant > isoniazid-monoresistant > drug-sensitive > "
-    "not evaluated. A small number of patients with indeterminate "
-    "Xpert results (`TB R`, n=9) were grouped with `Not Evaluated`."
-)
-
-if dr_status_csv.exists():
-    df_dr = pd.read_csv(dr_status_csv)
-    tB3 = doc.add_table(rows=1, cols=len(df_dr.columns))
-    tB3.style = "Table Grid"
-    hdr = tB3.rows[0].cells
-    for i, col in enumerate(df_dr.columns):
-        hdr[i].text = str(col)
-        hdr[i].paragraphs[0].runs[0].bold = True
-    for _, r in df_dr.iterrows():
-        cells = tB3.add_row().cells
-        for i, col in enumerate(df_dr.columns):
-            cells[i].text = str(r[col])
-    for row in tB3.rows:
-        for cell in row.cells:
-            for para in cell.paragraphs:
-                for run in para.runs:
-                    run.font.size = Pt(9)
-    add_para(
-        "Table B3. Cohort distribution and within-group LTFU rates by "
-        "drug-resistance status. Wilson-score 95% confidence intervals.",
-        italic=True, size=9
-    )
-
-add_para(
-    "LTFU rates were highest among patients with rifampin-resistant or "
-    "multidrug-resistant TB (20.4%, 95% CI 18.5–22.5) and lower among "
-    "patients with isoniazid-monoresistant disease (15.6%, 13.4–18.0) "
-    "and drug-sensitive disease (16.4%, 16.1–16.7). Patients without "
-    "DST results had the lowest observed LTFU rate (9.7%, 9.6–9.9), "
-    "which is most plausibly explained by differential ascertainment "
-    "of DST — performed more frequently in patients with smear-"
-    "positive pulmonary disease, longer index episodes, or admission "
-    "to specialised care — rather than a true protective effect of "
-    "the absence of a DST result."
-)
-
-
-# --------------------------------------------------------------------------
-# B.3 Complete-case sensitivity — Table B4
-# --------------------------------------------------------------------------
-add_heading("B.3 Complete-case sensitivity (Table B4)", level=2)
-
-cc_late_csv = RESULTS / "target_trial_defnB_cc_early_late_array.csv"
-cc_cs_csv   = RESULTS / "target_trial_defnB_cc_cause_specific.csv"
-mi_late_csv = RESULTS / "target_trial_defnB_mi_early_late_array.csv"
-
-if cc_late_csv.exists() and mi_late_csv.exists():
-    cc_all = pd.read_csv(cc_late_csv)
-    cc_late = cc_all[(cc_all["model"] == "late") & (cc_all["cap"] == 2)].copy()
-    cc_late["Trial_Month_n"] = cc_late["Trial_Month"].str.extract(r"(\d+)").astype(int)
-    cc_late = cc_late.sort_values("Trial_Month_n")
-    mi_all = pd.read_csv(mi_late_csv)
-    mi_late = mi_all[(mi_all["model"] == "late") & (mi_all["cap"] == 2)].copy()
-    mi_late["Trial_Month_n"] = mi_late["Trial_Month"].str.extract(r"(\d+)").astype(int)
-    mi_late = mi_late.sort_values("Trial_Month_n")
-
-    def _fmt(hr, lo, hi): return f"{hr:.2f} ({lo:.2f}–{hi:.2f})"
-
-    tB4 = doc.add_table(rows=1, cols=4)
-    tB4.style = "Table Grid"
-    hdr = tB4.rows[0].cells
-    for i, col in enumerate(["Trial Month", "MI primary aHR (95% CI)",
-                              "Complete-case aHR (95% CI)", "N (CC)"]):
-        hdr[i].text = col
-        hdr[i].paragraphs[0].runs[0].bold = True
-    for m in range(1, 7):
-        mi_row = mi_late[mi_late["Trial_Month_n"] == m]
-        cc_row = cc_late[cc_late["Trial_Month_n"] == m]
-        if mi_row.empty or cc_row.empty: continue
-        cells = tB4.add_row().cells
-        cells[0].text = f"Month {m}"
-        cells[1].text = _fmt(float(mi_row["HR"].iloc[0]), float(mi_row["CI_L"].iloc[0]),
-                              float(mi_row["CI_H"].iloc[0]))
-        cells[2].text = _fmt(float(cc_row["HR"].iloc[0]), float(cc_row["CI_L"].iloc[0]),
-                              float(cc_row["CI_H"].iloc[0]))
-        cells[3].text = f"{int(cc_row['N'].iloc[0]):,}"
-    for row in tB4.rows:
-        for cell in row.cells:
-            for para in cell.paragraphs:
-                for run in para.runs:
-                    run.font.size = Pt(9)
-    add_para(
-        "Table B4. Complete-case vs MI-pooled sensitivity comparison: "
-        "late-window mortality (cap = 2 yr from disengagement) under defn-B "
-        "+ grace eligibility. Complete-case subset N=110,456 (64.0% of full "
-        "cohort N=172,463). Per-trial-month N varies as additional "
-        "individuals are dropped by the time-varying eligibility filter.",
-        italic=True, size=9
-    )
-
-    if cc_cs_csv.exists():
-        cs = pd.read_csv(cc_cs_csv)
-        cs["Trial_Month_n"] = cs["Trial_Month"].str.extract(r"(\d+)").astype(int)
-        cs = cs.sort_values("Trial_Month_n")
-        tB4b = doc.add_table(rows=1, cols=3)
-        tB4b.style = "Table Grid"
-        hdr = tB4b.rows[0].cells
-        for i, col in enumerate(["Trial Month", "TB-cause aHR (95% CI)",
-                                  "Non-TB aHR (95% CI)"]):
-            hdr[i].text = col
-            hdr[i].paragraphs[0].runs[0].bold = True
-        for m in range(1, 7):
-            tb = cs[(cs["Trial_Month_n"] == m) & (cs["cause"] == "tb_hybrid")]
-            ntb = cs[(cs["Trial_Month_n"] == m) & (cs["cause"] == "nontb_hybrid")]
-            if tb.empty or ntb.empty: continue
-            cells = tB4b.add_row().cells
-            cells[0].text = f"Month {m}"
-            cells[1].text = _fmt(float(tb["HR"].iloc[0]), float(tb["CI_L"].iloc[0]),
-                                  float(tb["CI_H"].iloc[0]))
-            cells[2].text = _fmt(float(ntb["HR"].iloc[0]), float(ntb["CI_L"].iloc[0]),
-                                  float(ntb["CI_H"].iloc[0]))
-        for row in tB4b.rows:
-            for cell in row.cells:
-                for para in cell.paragraphs:
-                    for run in para.runs:
-                        run.font.size = Pt(9)
-        add_para(
-            "Table B4 (continued). Cause-specific complete-case results: "
-            "TB-attributable vs non-TB late mortality (hybrid attribution: "
-            "SIM ICD-10 + TBweb case-closure). Same trial design and "
-            "covariate set as Table B4 above.",
-            italic=True, size=9
-        )
-
-    add_para(
-        "Late-window aHRs in the complete-case subset overlap the multiple-"
-        "imputation primary at every trial month, and the cause-specific "
-        "TB-vs-non-TB separation is preserved. Conclusions of the primary "
-        "analysis are insensitive to the imputation."
-    )
-else:
-    add_para(
-        "Complete-case sensitivity outputs not found — run "
-        "30m_itt_target_trial_defnB_complete_case.R to populate Table B4.",
-        italic=True
-    )
 
 
 OUT_PATH.parent.mkdir(parents=True, exist_ok=True)

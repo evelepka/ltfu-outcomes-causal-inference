@@ -115,21 +115,28 @@ itt_cohort = itt_cohort.dropna(subset=["end_date"])
 itt_cohort = itt_cohort[(itt_cohort["end_date"] >= pd.Timestamp("2013-01-01")) & (itt_cohort["end_date"] <= pd.Timestamp("2023-12-31"))]
 attrition.append(("Exclude: Treatment end date outside 2013-2023", len(itt_cohort)))
 
-# --- PROXY START DATE LOGIC ---
-# This is crucial for avoiding data loss when tx_start is missing.
-# Proxy sequence: treatment start -> diagnostic date -> notification date
-itt_cohort["best_start"] = itt_cohort["tx_start"].fillna(itt_cohort["diagnostic_date"]).fillna(itt_cohort["notification_date"])
+# --- TREATMENT START DATE REQUIRED FOR PRIMARY ANALYSIS ---
+# Per the primary analysis specification, we require a recorded tx_start so that
+# the "month of LTFU" assignment used in the target-trial enrollment reflects
+# actual on-treatment time, not time from diagnosis.  Cases without a recorded
+# tx_start (predominantly "Abandono Primario" — diagnosed but never recorded as
+# initiating therapy) are excluded from the primary cohort and held for a
+# sensitivity analysis (handled separately).
+itt_cohort = itt_cohort[itt_cohort["tx_start"].notna()]
+attrition.append(("Exclude: No recorded treatment start date (Abandono Primario)", len(itt_cohort)))
+
+# best_start = tx_start (now always non-missing for the primary cohort)
+itt_cohort["best_start"] = itt_cohort["tx_start"]
 itt_cohort = itt_cohort.merge(dod_all[["sinan_clean", "death_date_comprehensive"]], on="sinan_clean", how="left")
 
-# Exclude candidates who died ON or BEFORE treatment/proxy start (Academic Rigor)
+# Exclude candidates who died ON or BEFORE treatment start
 # This handles the "Immortal Time" at the beginning of the treatment.
 pre_tx_death = (itt_cohort["death_date_comprehensive"].notna()) & (itt_cohort["death_date_comprehensive"] <= itt_cohort["best_start"])
 itt_cohort = itt_cohort[~pre_tx_death]
-attrition.append(("Exclude: Death on or before treatment start/proxy date", len(itt_cohort)))
+attrition.append(("Exclude: Death on or before treatment start", len(itt_cohort)))
 
-# Filter valid end dates (if tx_start is present, must be <= end_date)
-# (Used but also handled by tx_duration logic downstream)
-invalid_mask = (itt_cohort["tx_start"].notna()) & (itt_cohort["end_date"] < itt_cohort["tx_start"])
+# Filter valid end dates
+invalid_mask = itt_cohort["end_date"] < itt_cohort["tx_start"]
 itt_cohort = itt_cohort[~invalid_mask]
 attrition.append(("Exclude: Invalid dates (end_date < tx_start)", len(itt_cohort)))
 

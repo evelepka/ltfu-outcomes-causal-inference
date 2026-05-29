@@ -37,7 +37,7 @@ cs <- read.csv(cs_path, stringsAsFactors = FALSE)
 cs$Month <- as.numeric(gsub("Month_", "", cs$Trial_Month))
 cs <- cs |> dplyr::filter(cap == 2)
 
-mk_panel <- function(df_panel, c_tb, c_ntb) {
+mk_panel <- function(df_panel, title, subtitle, c_tb, c_ntb) {
   d_tb  <- df_panel |> dplyr::filter(cause == c_tb)  |> dplyr::mutate(Cause = "TB-cause death")
   d_ntb <- df_panel |> dplyr::filter(cause == c_ntb) |> dplyr::mutate(Cause = "Non-TB cause death")
   d <- bind_rows(d_tb, d_ntb)
@@ -55,25 +55,38 @@ mk_panel <- function(df_panel, c_tb, c_ntb) {
     scale_y_log10(breaks = c(0.5, 1, 2, 3, 5, 10),
                   minor_breaks = c(0.75, 1.5, 2.5, 4, 7),
                   limits = c(0.5, 12)) +
-    scale_x_continuous(breaks = 1:6, labels = as.character(1:6)) +
-    labs(x = "Month of LTFU",
-         y = "AHR (log scale)",
+    scale_x_continuous(breaks = 1:6, labels = paste("Mo", 1:6)) +
+    labs(title = title, subtitle = subtitle,
+         x = "Month of disengagement (defn-B)",
+         y = "Hazard ratio (log scale)",
          color = NULL) +
     theme_classic(base_size = 11) +
     theme(legend.position = "bottom",
+          plot.title = element_text(face = "bold", size = 13),
+          plot.subtitle = element_text(size = 9),
           panel.grid.major.y = element_line(color = "grey88", linewidth = 0.35),
           panel.grid.minor.y = element_line(color = "grey94", linewidth = 0.25))
 }
 
-pA <- mk_panel(cs, "tb_hybrid",  "nontb_hybrid")
-pB <- mk_panel(cs, "tb_simonly", "nontb_simonly")
+pA <- mk_panel(cs,
+               "A. Hybrid attribution (SIM ICD-10 + TBweb Obito) — primary",
+               "TB-cause aHR (red) vs non-TB aHR (blue); late mortality 6–24 mo from disengagement",
+               "tb_hybrid", "nontb_hybrid")
+
+pB <- mk_panel(cs,
+               "B. SIM-only attribution (uniform across arms) — sensitivity",
+               "Restricted to deaths with SIM ICD-10 codes; same trials, same covariates",
+               "tb_simonly", "nontb_simonly")
 
 fig4 <- pA / pB +
   plot_layout(heights = c(1, 1)) +
   plot_annotation(
-    tag_levels = "A",
+    title = "Figure 4. Cause-specific mortality after disengagement",
+    subtitle = "Sequential target-trial emulation, MI-pooled; defn-B + grace eligibility. The TB-cause hazard ratio (red) rising sharply across trial months while the non-TB negative-control hazard (blue) remains near unity supports a causal interpretation: the LTFU effect is mediated through interrupted TB therapy rather than purely confounded by social/clinical predictors of disengagement.",
     theme = theme(plot.background = element_rect(fill = "white", color = NA),
-                  plot.tag = element_text(face = "bold", size = 14))
+                  plot.title = element_text(face = "bold", size = 14),
+                  plot.subtitle = element_text(size = 9.5, color = "grey25",
+                                               margin = margin(b = 8)))
   )
 
 ggsave(OUT_PNG, fig4, width = 11, height = 9, dpi = 300, bg = "white")
