@@ -203,7 +203,7 @@ for _, row in retreated.iterrows():
     node_size[(2, row["col2"])] += 1
     flows[((1, "Retreatment"), (2, row["col2"]))] += 1
 
-X_POSITIONS = {0: 0.06, 1: 0.50, 2: 0.93}
+X_POSITIONS = {0: 0.02, 1: 0.50, 2: 0.97}
 
 # Derive explicit y-positions within each column by stacking proportionally to
 # the flow counts (top → bottom in ALL_NODES_ORDERED). Small padding between
@@ -300,35 +300,27 @@ annotations = [
     dict(x=X_POSITIONS[c], y=1.06, xref="paper", yref="paper",
          text=f"<b>{t}</b>", showarrow=False,
          font=dict(size=20, color="#1a1a2e", family="Arial"),
-         xanchor="center", yanchor="bottom")
+         xanchor="center" if c == 1 else ("left" if c == 0 else "right"),
+         yanchor="bottom")
     for c, t in headers.items()
 ]
-annotations.append(dict(
-    x=0.0, y=-0.08, xref="paper", yref="paper",
-    text=(f"<i>N = {TOTAL:,} individuals with loss to follow-up on their first new (Novo) TB episode. "
-          f"Retreatment episode outcomes draw from the subsequent notification in SINAN "
-          f"(case_outcome field). Follow-up censored {CENSOR_DATE.date()}. "
-          f"Flows &lt; {MIN_FLOW} hidden.</i>"),
-    showarrow=False, font=dict(size=15, family="Arial", color="#555"),
-    xanchor="left", yanchor="top"
-))
 
 fig.update_layout(
     # No plotly title — the surrounding figure (Figure 1) carries its own
     # panel title "D. TB trajectories after LTFU".
     font=dict(size=18, family="Arial", color="#2c2c2c"),
-    paper_bgcolor="#F8F9FA",
-    plot_bgcolor="#F8F9FA",
-    # Wider aspect so the composed Figure 1 right panel reads cleanly.
-    height=1000, width=1400,
-    margin=dict(l=140, r=140, t=80, b=160),
+    paper_bgcolor="white",
+    plot_bgcolor="white",
+    # Tight margins so the alluvial fills its panel; footnote removed.
+    height=1000, width=1600,
+    margin=dict(l=20, r=20, t=80, b=20),
     annotations=annotations,
 )
 
 fig.write_html(str(OUT_HTML), include_plotlyjs="cdn", full_html=True)
 print(f"\nWrote {OUT_HTML}")
 try:
-    fig.write_image(str(OUT_PNG), width=1400, height=1000, scale=2)
+    fig.write_image(str(OUT_PNG), width=1600, height=1000, scale=2)
     print(f"Wrote {OUT_PNG}")
 except Exception as e:
     print(f"PNG export skipped: {e}")
