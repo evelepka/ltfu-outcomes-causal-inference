@@ -16,3 +16,10 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
+
+# Manuscript drafts and appendix live only on the shared Google Drive,
+# not in this repo. Do not track .docx / .md drafts here.
+manuscript/
+*.docx
+Draft_*.md
+Appendix_*.md

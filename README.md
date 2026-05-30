@@ -26,11 +26,7 @@ outcomes-after-tb-abandonment/
 ├── README.md                  (this file)
 ├── COHORT_SELECTION.md        cohort definition and inclusion/exclusion details
 ├── CLAUDE.md                  agent / collaborator guidance
-├── .gitignore                 excludes data/ and results/
-├── manuscript/
-│   ├── Draft_2026-05-29.docx       current manuscript
-│   ├── Appendix_2026-05-29.docx    current appendix (12 sensitivity sections)
-│   └── Appendix_2026-05-29.md      markdown source for the appendix
+├── .gitignore                 excludes data/, results/, and manuscript drafts
 ├── figures/
 │   ├── Figure_1_descriptive.{png,pdf}        post-LTFU trajectories
 │   ├── Figure_2_cif_retreatment.{png,pdf}    24-mo cumulative incidence of retreatment
@@ -52,6 +48,8 @@ outcomes-after-tb-abandonment/
 ```
 
 Raw data files and intermediate CSVs are not committed (patient privacy). All script paths resolve via `_paths.R` and `01_itt_cohort_selection.py`'s root resolver; see `COHORT_SELECTION.md` for the regeneration workflow.
+
+The current manuscript (`Draft_*.docx`), appendix (`Appendix_*.docx`), and markdown source live in the project's shared Google Drive folder, not in this repo. Ask a collaborator for access if you need them.
 
 ## Pipeline order
 
