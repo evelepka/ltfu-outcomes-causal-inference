@@ -128,18 +128,18 @@ fg$hr_color     <- ifelse(fg$is_ref,  ref_color, "grey25")
 # 1. Labels panel (leftmost) — strip on left shows group names at top of group
 p_labels <- ggplot(cox, aes(y = Label)) +
   geom_text(aes(x = 0, label = Label),
-            hjust = 0, size = 3.8, color = cox$label_color) +
+            hjust = 0, size = 4.5, color = cox$label_color) +
   scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
   facet_grid(rows = vars(Group), scales = "free_y", space = "free_y",
              switch = "y") +
   labs(title = "Characteristic") +
-  theme_void(base_size = 11) +
+  theme_void(base_size = 13) +
   common_strip +
   theme(
-    plot.title         = element_text(face = "bold", size = 12, hjust = 0,
+    plot.title         = element_text(face = "bold", size = 14, hjust = 0,
                                       margin = margin(b = 10)),
     strip.text.y.left  = element_text(angle = 0, face = "bold", hjust = 0,
-                                      vjust = 1, size = 11, color = "#2c3e50",
+                                      vjust = 1, size = 13, color = "#2c3e50",
                                       margin = margin(r = 10)),
     panel.border       = element_blank(),
     plot.margin        = margin(5, 0, 5, 5)
@@ -148,14 +148,14 @@ p_labels <- ggplot(cox, aes(y = Label)) +
 # 2. Cox AHR text panel
 p_cox_text <- ggplot(cox, aes(y = Label)) +
   geom_text(aes(x = 0, label = hr_text),
-            hjust = 0.5, size = 3.4, color = cox$hr_color) +
+            hjust = 0.5, size = 4.0, color = cox$hr_color) +
   scale_x_continuous(limits = c(-1, 1), expand = c(0, 0)) +
   facet_grid(rows = vars(Group), scales = "free_y", space = "free_y") +
   labs(title = "AHR (95% CI)") +
-  theme_void(base_size = 11) +
+  theme_void(base_size = 13) +
   common_strip +
   theme(
-    plot.title   = element_text(face = "bold", size = 12, hjust = 0.5,
+    plot.title   = element_text(face = "bold", size = 14, hjust = 0.5,
                                 margin = margin(b = 10)),
     strip.text   = element_blank(),
     panel.border = element_blank(),
@@ -183,10 +183,10 @@ p_cox_forest <- ggplot(cox, aes(y = Label)) +
   facet_grid(rows = vars(Group), scales = "free_y", space = "free_y") +
   labs(title = "A. Adjusted mortality HR",
        x = "AHR", y = NULL) +
-  theme_classic(base_size = 11) +
+  theme_classic(base_size = 13) +
   common_strip +
   theme(
-    plot.title          = element_text(face = "bold", size = 12, hjust = 0,
+    plot.title          = element_text(face = "bold", size = 14, hjust = 0,
                                        margin = margin(b = 10)),
     axis.text.y         = element_blank(),
     axis.ticks.y        = element_blank(),
@@ -200,14 +200,14 @@ p_cox_forest <- ggplot(cox, aes(y = Label)) +
 # 4. FG SHR text panel
 p_fg_text <- ggplot(fg, aes(y = Label)) +
   geom_text(aes(x = 0, label = hr_text),
-            hjust = 0.5, size = 3.4, color = fg$hr_color) +
+            hjust = 0.5, size = 4.0, color = fg$hr_color) +
   scale_x_continuous(limits = c(-1, 1), expand = c(0, 0)) +
   facet_grid(rows = vars(Group), scales = "free_y", space = "free_y") +
   labs(title = "SHR (95% CI)") +
-  theme_void(base_size = 11) +
+  theme_void(base_size = 13) +
   common_strip +
   theme(
-    plot.title   = element_text(face = "bold", size = 12, hjust = 0.5,
+    plot.title   = element_text(face = "bold", size = 14, hjust = 0.5,
                                 margin = margin(b = 10)),
     strip.text   = element_blank(),
     panel.border = element_blank(),
@@ -232,10 +232,10 @@ p_fg_forest <- ggplot(fg, aes(y = Label)) +
   facet_grid(rows = vars(Group), scales = "free_y", space = "free_y") +
   labs(title = "B. Adjusted retreatment SHR",
        x = "SHR", y = NULL) +
-  theme_classic(base_size = 11) +
+  theme_classic(base_size = 13) +
   common_strip +
   theme(
-    plot.title          = element_text(face = "bold", size = 12, hjust = 0,
+    plot.title          = element_text(face = "bold", size = 14, hjust = 0,
                                        margin = margin(b = 10)),
     axis.text.y         = element_blank(),
     axis.ticks.y        = element_blank(),

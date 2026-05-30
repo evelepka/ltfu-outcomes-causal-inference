@@ -62,7 +62,7 @@ make_panel <- function(df_plot, palette, legend_title, subtitle, pval_text,
   ggplot(df_plot, aes(x = time, y = est, color = group)) +
     geom_step(linewidth = 1.15) +
     annotate("text", x = 0.05, y = 0.58, label = pval_text,
-             size = 3.5, hjust = 0, fontface = "italic") +
+             size = 4.5, hjust = 0, fontface = "italic") +
     scale_y_continuous(labels = percent_format(accuracy = 1),
                        limits = c(0, 0.60)) +
     scale_x_continuous(breaks = seq(0, HORIZON, by = 0.5),
@@ -72,10 +72,10 @@ make_panel <- function(df_plot, palette, legend_title, subtitle, pval_text,
     labs(subtitle = subtitle,
          x = "Months since loss to follow-up",
          y = "Cumulative incidence of retreatment") +
-    theme_classic(base_size = 11) +
+    theme_classic(base_size = 14) +
     theme(legend.position = "bottom",
-          legend.title = element_text(face = "bold", size = 9),
-          plot.subtitle = element_text(face = "bold", size = 11))
+          legend.title = element_text(face = "bold", size = 12),
+          plot.subtitle = element_text(face = "bold", size = 14))
 }
 
 gray_p <- function(cif_obj) {

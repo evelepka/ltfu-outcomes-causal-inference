@@ -132,8 +132,8 @@ pA <- ggplot(hr_tbl, aes(x = month_mid, y = HR)) +
   labs(title = "A. Time-varying hazard ratio",
        x = "Time since treatment start (months)",
        y = "HR") +
-  theme_classic(base_size = 11) +
-  theme(plot.title = element_text(face = "bold", size = 13),
+  theme_classic(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", size = 15),
         panel.grid.major.y = element_line(color = "grey88", linewidth = 0.35),
         panel.grid.minor.y = element_line(color = "grey94", linewidth = 0.25))
 
@@ -172,9 +172,9 @@ pB <- ggplot(dfB, aes(x = Month, y = HR, color = Window, group = Window)) +
        x = "Month of LTFU",
        y = "AHR",
        color = NULL) +
-  theme_classic(base_size = 11) +
+  theme_classic(base_size = 14) +
   theme(legend.position = "bottom",
-        plot.title = element_text(face = "bold", size = 13),
+        plot.title = element_text(face = "bold", size = 15),
         panel.grid.major.y = element_line(color = "grey88", linewidth = 0.35),
         panel.grid.minor.y = element_line(color = "grey94", linewidth = 0.25))
 
@@ -226,8 +226,8 @@ pC_text <- ggplot(dfC, aes(y = rowlabel)) +
   scale_y_discrete(expand = expansion(add = c(0.5, 1.5))) +
   scale_color_brewer(palette = "Dark2", guide = "none") +
   labs(title = "C. Mortality AHR by subgroup") +
-  theme_void(base_size = 11) +
-  theme(plot.title = element_text(face = "bold", size = 13,
+  theme_void(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", size = 15,
                                    margin = margin(b = 8)),
         plot.margin = margin(5, 2, 20, 8))
 
@@ -243,7 +243,7 @@ pC_forest <- ggplot(dfC, aes(x = HR, y = rowlabel, color = Subgroup_clean)) +
   scale_y_discrete(expand = expansion(add = c(0.5, 1.5))) +
   scale_color_brewer(palette = "Dark2") +
   labs(x = "AHR", y = NULL, color = NULL) +
-  theme_classic(base_size = 11) +
+  theme_classic(base_size = 14) +
   theme(legend.position = "bottom",
         legend.margin = margin(t = 8),
         axis.text.y = element_blank(),

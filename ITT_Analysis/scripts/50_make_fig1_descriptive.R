@@ -127,14 +127,14 @@ pC <- build_raincloud(df_death, "time_d",
 # Compose — three rainclouds (A, B, C) stacked on the left,
 # alluvial (D) on the right (wider, so D fills more of the figure)
 # ---------------------------------------------------------------------------
-fig1 <- (pA / pB / pC) | pD +
-  plot_layout(widths = c(1, 1.9)) +
+fig1 <- ((pA / pB / pC) | pD) +
+  plot_layout(widths = c(1, 1.6)) +
   plot_annotation(
     theme = theme(plot.background = element_rect(fill = "white", color = NA))
   )
 
-ggsave(OUT_PNG, fig1, width = 22, height = 10, dpi = 300, bg = "white")
-ggsave(OUT_PDF, fig1, width = 22, height = 10, bg = "white")
+ggsave(OUT_PNG, fig1, width = 20, height = 10, dpi = 300, bg = "white")
+ggsave(OUT_PDF, fig1, width = 20, height = 10, bg = "white")
 cat(sprintf("[fig1] Wrote %s\n", OUT_PNG))
 cat(sprintf("[fig1] Wrote %s\n", OUT_PDF))
 

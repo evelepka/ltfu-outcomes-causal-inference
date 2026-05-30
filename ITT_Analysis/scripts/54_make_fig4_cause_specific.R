@@ -55,7 +55,7 @@ mk_panel <- function(df_panel, c_tb, c_ntb) {
     labs(x = "Month of LTFU",
          y = "AHR (log scale)",
          color = NULL) +
-    theme_classic(base_size = 11) +
+    theme_classic(base_size = 14) +
     theme(legend.position = "bottom",
           panel.grid.major.y = element_line(color = "grey88", linewidth = 0.35),
           panel.grid.minor.y = element_line(color = "grey94", linewidth = 0.25))
