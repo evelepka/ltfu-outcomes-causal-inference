@@ -203,7 +203,7 @@ for _, row in retreated.iterrows():
     node_size[(2, row["col2"])] += 1
     flows[((1, "Retreatment"), (2, row["col2"]))] += 1
 
-X_POSITIONS = {0: 0.01, 1: 0.45, 2: 0.99}
+X_POSITIONS = {0: 0.06, 1: 0.50, 2: 0.93}
 
 # Derive explicit y-positions within each column by stacking proportionally to
 # the flow counts (top → bottom in ALL_NODES_ORDERED). Small padding between
@@ -299,7 +299,7 @@ headers = {
 annotations = [
     dict(x=X_POSITIONS[c], y=1.06, xref="paper", yref="paper",
          text=f"<b>{t}</b>", showarrow=False,
-         font=dict(size=13, color="#1a1a2e", family="Arial"),
+         font=dict(size=20, color="#1a1a2e", family="Arial"),
          xanchor="center", yanchor="bottom")
     for c, t in headers.items()
 ]
@@ -309,27 +309,26 @@ annotations.append(dict(
           f"Retreatment episode outcomes draw from the subsequent notification in SINAN "
           f"(case_outcome field). Follow-up censored {CENSOR_DATE.date()}. "
           f"Flows &lt; {MIN_FLOW} hidden.</i>"),
-    showarrow=False, font=dict(size=10, family="Arial", color="#555"),
+    showarrow=False, font=dict(size=15, family="Arial", color="#555"),
     xanchor="left", yanchor="top"
 ))
 
 fig.update_layout(
     # No plotly title — the surrounding figure (Figure 1) carries its own
-    # panel title "A. TB trajectories after loss to follow-up". Keeping a
-    # duplicate here caused visible collision in the composed Figure 1.
-    font=dict(size=12, family="Arial", color="#2c2c2c"),
+    # panel title "D. TB trajectories after LTFU".
+    font=dict(size=18, family="Arial", color="#2c2c2c"),
     paper_bgcolor="#F8F9FA",
     plot_bgcolor="#F8F9FA",
-    # Compact aspect (~1.1:1) so the left panel of Figure 1 doesn't stretch it.
-    height=1000, width=1100,
-    margin=dict(l=30, r=30, t=50, b=140),
+    # Wider aspect so the composed Figure 1 right panel reads cleanly.
+    height=1000, width=1400,
+    margin=dict(l=140, r=140, t=80, b=160),
     annotations=annotations,
 )
 
 fig.write_html(str(OUT_HTML), include_plotlyjs="cdn", full_html=True)
 print(f"\nWrote {OUT_HTML}")
 try:
-    fig.write_image(str(OUT_PNG), width=1100, height=1000, scale=2)
+    fig.write_image(str(OUT_PNG), width=1400, height=1000, scale=2)
     print(f"Wrote {OUT_PNG}")
 except Exception as e:
     print(f"PNG export skipped: {e}")
