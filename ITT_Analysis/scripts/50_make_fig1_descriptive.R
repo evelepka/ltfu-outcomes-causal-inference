@@ -48,15 +48,16 @@ if (!file.exists(alluvial_png)) {
                alluvial_png))
 }
 img_raster <- png::readPNG(alluvial_png)
-pA <- ggplot() +
+pD <- ggplot() +
   annotation_custom(rasterGrob(img_raster, interpolate = TRUE,
                                width = unit(1, "npc"),
                                height = unit(1, "npc")),
                     xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
   theme_void() +
-  labs(title = "A. TB trajectories after LTFU") +
-  theme(plot.title = element_text(face = "bold", size = 15,
-                                  margin = margin(b = 4)))
+  labs(title = "D. TB trajectories after LTFU") +
+  theme(plot.title = element_text(face = "bold", size = 18,
+                                  margin = margin(b = 4)),
+        plot.margin = margin(2, 0, 2, 0))
 
 # Still compute caption stats for the side CSV
 n_ltfu  <- nrow(ltfu)
@@ -93,45 +94,47 @@ build_raincloud <- function(df, x_var, x_label, title_text, fill_color,
     annotate("text",
              x = med_val, y = max_d * 1.05,
              label = sprintf("median = %.2f%s", med_val, median_suffix),
-             hjust = -0.05, size = 4.0, fontface = "italic") +
+             hjust = -0.05, size = 5.5, fontface = "italic") +
     scale_x_continuous(limits = x_limits, breaks = x_breaks) +
     labs(title = title_text, x = x_label, y = NULL) +
-    theme_minimal(base_size = 13) +
-    theme(plot.title = element_text(face = "bold", size = 13),
+    theme_minimal(base_size = 16) +
+    theme(plot.title = element_text(face = "bold", size = 17),
+          axis.title.x = element_text(size = 15),
+          axis.text.x = element_text(size = 14),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           panel.grid.minor = element_blank(),
           panel.grid.major.y = element_blank())
 }
 
-pR1 <- build_raincloud(df_aband, "abandon_months",
+pA <- build_raincloud(df_aband, "abandon_months",
                        "Months from treatment start",
-                       sprintf("B. Timing of LTFU (N = %s)",
+                       sprintf("A. Timing of LTFU (N = %s)",
                                scales::comma(nrow(df_aband))),
                        "#e74c3c", c(0, 6), 0:6, " months")
-pR2 <- build_raincloud(df_retx, "time_rn",
+pB <- build_raincloud(df_retx, "time_rn",
                        "Years since LTFU",
-                       sprintf("C. Time to retreatment (N = %s)",
+                       sprintf("B. Time to retreatment (N = %s)",
                                scales::comma(nrow(df_retx))),
                        "#f1c40f", c(0, 12), seq(0, 12, 2), " years")
-pR3 <- build_raincloud(df_death, "time_d",
+pC <- build_raincloud(df_death, "time_d",
                        "Years since LTFU",
-                       sprintf("D. Time to death (N = %s)",
+                       sprintf("C. Time to death (N = %s)",
                                scales::comma(nrow(df_death))),
                        "#2c3e50", c(0, 12), seq(0, 12, 2), " years")
 
 # ---------------------------------------------------------------------------
-# Compose — A on left (alluvial, wider ~1.2:1 aspect), B three rainclouds
-# stacked vertically on the right
+# Compose — three rainclouds (A, B, C) stacked on the left,
+# alluvial (D) on the right (wider, so D fills more of the figure)
 # ---------------------------------------------------------------------------
-fig1 <- pA | (pR1 / pR2 / pR3) +
-  plot_layout(widths = c(1.3, 1)) +
+fig1 <- (pA / pB / pC) | pD +
+  plot_layout(widths = c(1, 1.9)) +
   plot_annotation(
     theme = theme(plot.background = element_rect(fill = "white", color = NA))
   )
 
-ggsave(OUT_PNG, fig1, width = 18, height = 10, dpi = 300, bg = "white")
-ggsave(OUT_PDF, fig1, width = 18, height = 10, bg = "white")
+ggsave(OUT_PNG, fig1, width = 22, height = 10, dpi = 300, bg = "white")
+ggsave(OUT_PDF, fig1, width = 22, height = 10, bg = "white")
 cat(sprintf("[fig1] Wrote %s\n", OUT_PNG))
 cat(sprintf("[fig1] Wrote %s\n", OUT_PDF))
 
