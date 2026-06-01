@@ -193,8 +193,8 @@ plot(kmf_ipcw, colors['ipcw'], '(3) IPCW: persistent disengagement (target)')
 ax.set_xlim(0, MAX_FU_YR*12)
 ax.set_xlabel('Months from LTFU date')
 ax.set_ylabel('Cumulative mortality (%)')
-ax.set_title('Late-window mortality among LTFU patients:\n'
-             'ITT vs. naive-censored vs. IPCW (persistent disengagement)',
+ax.set_title(''
+             '',
              loc='left', fontsize=11, fontweight='bold')
 ax.legend(loc='upper left', frameon=False)
 ax.grid(alpha=0.25)

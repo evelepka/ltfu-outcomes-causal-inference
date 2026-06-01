@@ -110,8 +110,7 @@ pA <- ggplot(hr_tbl, aes(x = month_mid, y = HR)) +
   scale_x_continuous(breaks = seq(0, HORIZON, 0.25),
                      labels = function(x) paste0(round(x*12), "mo"),
                      limits = c(0, HORIZON)) +
-  labs(title = "A. Time-varying hazard ratio (crude, counting-process)",
-       subtitle = "Piecewise monthly HR for disengaged vs. on-treatment (defn B: exposure at last visit, ≈30d before recorded end_date).\nEarly months: apparent HR<1 (immortal-time artefact). Later months: HR grows as disengagement mortality accumulates.",
+  labs(title = "A",
        x = "Time since treatment start",
        y = "HR (log scale)") +
   theme_classic(base_size = 11) +
@@ -128,18 +127,18 @@ tt_csv <- file.path(ITT_RESULTS_DIR, "target_trial_defnB_mi_early_late_array.csv
 if (!file.exists(tt_csv)) stop(sprintf("Missing %s (run 30h)", tt_csv))
 dfB_raw <- read.csv(tt_csv, stringsAsFactors = FALSE)
 dfB <- dfB_raw |>
-  dplyr::filter((model == "early" & cap == 0.5) | (model == "late" & cap == 5)) |>
+  dplyr::filter((model == "early" & cap == 0.5) | (model == "late" & cap == 2)) |>
   dplyr::mutate(
     Month = as.numeric(gsub("Month_", "", Trial_Month)),
     Window = dplyr::recode(model,
                            "early" = "Early (0–6 months post-disengagement)",
-                           "late"  = "Late (6–60 months post-disengagement)")
+                           "late"  = "Late (6–24 months post-disengagement)")
   )
 dfB$Window <- factor(dfB$Window, levels = c("Early (0–6 months post-disengagement)",
-                                              "Late (6–60 months post-disengagement)"))
+                                              "Late (6–24 months post-disengagement)"))
 
 palette_EL <- c("Early (0–6 months post-disengagement)" = "#3498db",
-                "Late (6–60 months post-disengagement)" = "#e74c3c")
+                "Late (6–24 months post-disengagement)" = "#e74c3c")
 
 pB <- ggplot(dfB, aes(x = Month, y = HR, color = Window, group = Window)) +
   geom_hline(yintercept = 1, linetype = "dashed", linewidth = 0.5) +
@@ -151,8 +150,7 @@ pB <- ggplot(dfB, aes(x = Month, y = HR, color = Window, group = Window)) +
   scale_y_log10(breaks = c(0.25, 0.5, 1, 2, 4),
                 minor_breaks = c(0.33, 0.75, 1.5, 3)) +
   scale_x_continuous(breaks = 1:6, labels = paste("Mo", 1:6)) +
-  labs(title = "B. Mortality HR by month of disengagement (defn-B, grace-period eligibility)",
-       subtitle = "Sequential target-trial emulation; MI-pooled; trial-month = month patient last attended treatment",
+  labs(title = "B",
        x = "Month of disengagement (last attended visit)",
        y = "Hazard ratio (log scale)",
        color = NULL) +
@@ -167,10 +165,10 @@ pB <- ggplot(dfB, aes(x = Month, y = HR, color = Window, group = Window)) +
 # Panel C: Subgroup forest — LATE mortality (defn-B + grace)
 # ---------------------------------------------------------------------------
 cat("[fig3-defnB] Panel C: subgroup forest (defn-B + grace) ...\n")
-sub_csv <- file.path(ITT_RESULTS_DIR, "target_trial_defnB_subgroups_mi.csv")
-if (!file.exists(sub_csv)) stop(sprintf("Missing %s (run 32e)", sub_csv))
+sub_csv <- file.path(ITT_RESULTS_DIR, "target_trial_subgroup_interactions_grace_mi.csv")
+if (!file.exists(sub_csv)) stop(sprintf("Missing %s (run 32d grace subgroups)", sub_csv))
 dfC_all <- read.csv(sub_csv, stringsAsFactors = FALSE)
-dfC <- dfC_all |> dplyr::filter(model == "late", cap == 5)
+dfC <- dfC_all |> dplyr::filter(model == "late", cap == 2)
 
 dfC <- dfC |>
   dplyr::mutate(
@@ -199,8 +197,7 @@ pC_text <- ggplot(dfC, aes(y = rowlabel)) +
             hjust = 1, size = 3.5, color = "grey25") +
   scale_x_continuous(limits = c(-0.02, 1.02), expand = c(0, 0)) +
   scale_color_brewer(palette = "Dark2", guide = "none") +
-  labs(title = "C. Late-mortality HR by subgroup (defn-B, grace)",
-       subtitle = "Sequential target-trial emulation; deaths 6–60 months post-disengagement; MI-pooled") +
+  labs(title = "C") +
   theme_void(base_size = 11) +
   theme(plot.title = element_text(face = "bold", size = 13, margin = margin(b = 2)),
         plot.subtitle = element_text(size = 9, color = "grey40", margin = margin(b = 8)),

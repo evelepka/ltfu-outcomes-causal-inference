@@ -229,7 +229,7 @@ handles = [Line2D([0],[0], marker='o', color='w', label='Crude (unadjusted)',
 fig.legend(handles=handles, loc='lower center', ncol=2, frameon=False,
            bbox_to_anchor=(0.5, -0.02), fontsize=10)
 
-fig.suptitle('Baseline composition: LTFU vs on-treatment at m=3 landmark, before and after PS weighting',
+fig.suptitle('',
              fontsize=12.5, fontweight='bold', y=1.0)
 fig.tight_layout(rect=[0, 0.03, 1, 0.97])
 fig.savefig(OUT_PNG, dpi=300, bbox_inches='tight', facecolor='white')
