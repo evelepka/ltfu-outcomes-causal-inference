@@ -247,7 +247,7 @@ p_fg_forest <- ggplot(fg, aes(y = Label)) +
   )
 
 fig4 <- p_labels + p_cox_text + p_cox_forest + p_fg_text + p_fg_forest +
-  plot_layout(widths = c(1.7, 0.75, 1.4, 0.75, 1.4)) +
+  plot_layout(widths = c(1.1, 0.7, 1.4, 0.7, 1.4)) +
   plot_annotation(
     theme = theme(plot.background = element_rect(fill = "white", color = NA))
   )
