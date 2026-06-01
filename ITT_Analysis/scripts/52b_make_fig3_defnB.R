@@ -212,7 +212,7 @@ pC_forest <- ggplot(dfC, aes(x = HR, y = rowlabel, color = Subgroup_clean)) +
   scale_x_log10(breaks = c(0.5, 1, 2, 3, 4),
                 minor_breaks = c(0.75, 1.5, 2.5, 3.5),
                 limits = c(0.7, 5)) +
-  scale_color_brewer(palette = "Dark2") +
+  scale_color_brewer(palette = "Dark2", guide = "none") +
   labs(x = "Hazard ratio (log scale)", y = NULL, color = NULL) +
   theme_classic(base_size = 11) +
   theme(legend.position = "bottom",
