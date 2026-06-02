@@ -96,8 +96,13 @@ the treatment arm".
 
 ## Related repos
 
-- `github.com/jasonandr/outcomes-after-tb-abandonment` — this repo (ITT
-  pipeline, authoritative)
+- `github.com/evelepka/ltfu-outcomes-causal-inference` — this repo (ITT
+  pipeline, **canonical**). It is the `origin` remote and `main` is the
+  authoritative branch. Push here; `git pull`/`git push` with no arguments
+  target it (local `main` tracks `origin/main`).
+- `github.com/jasonandr/outcomes-after-tb-abandonment` — DEPRECATED backup.
+  No longer a remote on this clone (removed 2026-06-02); was stale on an old
+  `master` branch. Do not treat as authoritative.
 - `github.com/jasonandr/SP-TB-spatial-analyses` — private; geocoding pipeline
   and São Paulo spatial analyses. Reads `analysis_ready_cohort.csv` from the
   same GDrive Data/ folder. Future work.
