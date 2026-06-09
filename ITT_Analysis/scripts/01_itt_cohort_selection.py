@@ -29,9 +29,12 @@ def _find_project_root():
 
 BASE_DIR = _find_project_root()
 FINAL_DATA = BASE_DIR / "Data" / "Final_table_cleaned.csv"
-OUT_CSV = BASE_DIR / "ITT_Analysis" / "data" / "itt_cohort.csv"
-OUT_DOC = BASE_DIR / "ITT_Analysis" / "results" / "Inclusion_Exclusion_ITT.docx"
-OUT_FLOWCHART = BASE_DIR / "Data" / "exclusion_flowchart.csv"
+# Sensitivity variant (reviewer comment #6): when INCLUDE_INCOMPLETE_AS_LTFU=1
+# write to separate filenames so the primary cohort is never overwritten.
+_SUFFIX = "_incl_incomplete" if os.environ.get("INCLUDE_INCOMPLETE_AS_LTFU") == "1" else ""
+OUT_CSV = BASE_DIR / "ITT_Analysis" / "data" / f"itt_cohort{_SUFFIX}.csv"
+OUT_DOC = BASE_DIR / "ITT_Analysis" / "results" / f"Inclusion_Exclusion_ITT{_SUFFIX}.docx"
+OUT_FLOWCHART = BASE_DIR / "Data" / f"exclusion_flowchart{_SUFFIX}.csv"
 
 OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
 OUT_DOC.parent.mkdir(parents=True, exist_ok=True)
@@ -67,17 +70,29 @@ ABANDON_OUTCOMES = {"Abandono", "Abandono Primario", "Faltoso"}
 print("Loading diagnostic dates for proxying...")
 diag_df = df[["sinan_clean", "diagnostic_date"]].dropna().groupby("sinan_clean")["diagnostic_date"].min().reset_index()
 
+# Sensitivity option (reviewer comment #6): include first-Novo episodes with
+# missing/blank index outcome, classifying them as LTFU. Default OFF — when off,
+# behaviour is byte-identical to the primary cohort and outputs go to the
+# primary filenames. When INCLUDE_INCOMPLETE_AS_LTFU=1, blanks/NA are retained
+# and labelled LTFU, and outputs are written to *_incl_incomplete filenames.
+INCLUDE_INCOMPLETE = os.environ.get("INCLUDE_INCOMPLETE_AS_LTFU") == "1"
+
 # For the LTFU group: First "Novo" episode ending in abandonment
 print("Selecting First Abandonment episodes (Novo)...")
 # Excluding "Mud Diag", empty/null, and blank outcomes — none of these represent a valid TB episode conclusion
 all_novo = df[df["case_type"].str.strip().str.title() == "Novo"]
-all_novo_valid = all_novo[
-    all_novo["case_outcome"].notna() &
-    (all_novo["case_outcome"].str.strip() != "") &
-    (all_novo["case_outcome"] != "Mud Diag")
-]
+if INCLUDE_INCOMPLETE:
+    # Keep missing/blank outcomes (still drop change-of-diagnosis); they will be
+    # classified as LTFU below.
+    all_novo_valid = all_novo[all_novo["case_outcome"] != "Mud Diag"]
+else:
+    all_novo_valid = all_novo[
+        all_novo["case_outcome"].notna() &
+        (all_novo["case_outcome"].str.strip() != "") &
+        (all_novo["case_outcome"] != "Mud Diag")
+    ]
 
-# To avoid overlap and ensure we pick the *absolute first* episode correctly, 
+# To avoid overlap and ensure we pick the *absolute first* episode correctly,
 # we take the first Novo per person among ANY outcome (except Mud Diag), then split.
 first_novo = all_novo_valid.sort_values("end_date").groupby("sinan_clean", as_index=False).first().copy()
 
@@ -86,8 +101,12 @@ TRANSFER_OUTCOMES = {"Transf Outro Municipio", "Transf Outro Estado/Pais"}
 
 # Classify based on index outcome
 # Non-LTFU: only valid definitive outcomes (excludes transfers)
+_incomplete = first_novo["case_outcome"].isna() | (first_novo["case_outcome"].astype(str).str.strip() == "")
+_is_ltfu = first_novo["case_outcome"].isin(ABANDON_OUTCOMES)
+if INCLUDE_INCOMPLETE:
+    _is_ltfu = _is_ltfu | _incomplete
 first_novo["itt_group"] = np.where(
-    first_novo["case_outcome"].isin(ABANDON_OUTCOMES), "Loss to follow-up",
+    _is_ltfu, "Loss to follow-up",
     np.where(first_novo["case_outcome"].isin(TRANSFER_OUTCOMES), "Excluded_Transfer", "Non-LTFU")
 )
 
@@ -139,6 +158,14 @@ attrition.append(("Exclude: Death on or before treatment start", len(itt_cohort)
 invalid_mask = itt_cohort["end_date"] < itt_cohort["tx_start"]
 itt_cohort = itt_cohort[~invalid_mask]
 attrition.append(("Exclude: Invalid dates (end_date < tx_start)", len(itt_cohort)))
+
+# Exclude post-mortem-identified cases (TB discovered only after death, raw
+# disease_discovery == "Descob. Apos Obito").  These individuals were never at
+# risk for loss to follow-up, so they cannot inform the LTFU-vs-continued
+# contrast and are removed from the cohort.  (All fall in the Non-LTFU arm.)
+postmortem_mask = itt_cohort["disease_discovery"] == "Descob. Apos Obito"
+itt_cohort = itt_cohort[~postmortem_mask]
+attrition.append(("Exclude: Post-mortem identification (discovered after death)", len(itt_cohort)))
 
 print(f"Final ITT Cohort Size: {len(itt_cohort):,}")
 print(itt_cohort["itt_group"].value_counts())

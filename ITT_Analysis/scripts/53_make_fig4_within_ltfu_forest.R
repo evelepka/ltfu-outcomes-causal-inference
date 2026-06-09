@@ -4,7 +4,7 @@
 # FG_Retr_Adjusted_MI (right) from multivariable_results_mi_cc.csv.
 # Rows are grouped into three sections:
 #   - Demographic   (age, race, education)
-#   - Psychosocial  (homelessness, incarceration)
+#   - Social  (homelessness, incarceration)
 #   - Biomedical    (sex, HIV, diabetes, alcohol, drug use, hospital admission,
 #                    clinical form, DOT, LTFU duration)
 # Layout (5 patchwork columns sharing y-axis via identical facet_grid):
@@ -65,8 +65,8 @@ TERM_MAP <- list(
   list(term = "__ref_edu",                                                     group = "Demographic",  label = "Education: ≥12 years",     is_ref = TRUE),
   list(term = "edu_clean8 - 11 years",                                         group = "Demographic",  label = "Education: 8-11 years",    is_ref = FALSE),
   list(term = "edu_clean≤ 7 years",                                       group = "Demographic",  label = "Education: ≤7 years",      is_ref = FALSE),
-  list(term = "homelessnessYes",                                               group = "Psychosocial", label = "Experiencing homelessness",is_ref = FALSE),
-  list(term = "incarceratedYes",                                               group = "Psychosocial", label = "Incarcerated",             is_ref = FALSE),
+  list(term = "homelessnessYes",                                               group = "Social", label = "Experiencing homelessness",is_ref = FALSE),
+  list(term = "incarceratedYes",                                               group = "Social", label = "Incarcerated",             is_ref = FALSE),
   list(term = "hiv_aidsPositive",                                              group = "Biomedical",   label = "HIV-positive",             is_ref = FALSE),
   list(term = "diabetesYes",                                                   group = "Biomedical",   label = "Diabetes",                 is_ref = FALSE),
   list(term = "alcoholYes",                                                    group = "Biomedical",   label = "Alcohol use",              is_ref = FALSE),
@@ -90,7 +90,7 @@ make_df <- function(model_name) {
   d <- meta |>
     dplyr::left_join(coef_rows, by = "term") |>
     dplyr::arrange(order)
-  d$Group <- factor(d$group, levels = c("Demographic", "Psychosocial", "Biomedical"))
+  d$Group <- factor(d$group, levels = c("Demographic", "Social", "Biomedical"))
   # Factor levels top-to-bottom (reverse = bottom appears first in discrete axis)
   d$Label <- factor(d$label, levels = rev(unique(d$label)))
   d$hr_text <- ifelse(d$is_ref,
@@ -256,3 +256,15 @@ ggsave(OUT_PNG, fig4, width = 15, height = 11.5, dpi = 300, bg = "white")
 ggsave(OUT_PDF, fig4, width = 15, height = 11.5, bg = "white")
 cat(sprintf("[fig4] Wrote %s\n", OUT_PNG))
 cat(sprintf("[fig4] Wrote %s\n", OUT_PDF))
+
+# Split outputs: mortality-only (new main Figure 3) and retreatment-only (appendix),
+# since the descriptive mortality figure becomes Figure 2 and retreatment moves to the appendix.
+wht <- plot_annotation(theme = theme(plot.background = element_rect(fill = "white", color = NA)))
+fig_mort <- p_labels + p_cox_text + p_cox_forest + plot_layout(widths = c(1.1, 0.7, 1.4)) + wht
+fig_retr <- p_labels + p_fg_text + p_fg_forest + plot_layout(widths = c(1.1, 0.7, 1.4)) + wht
+MORT_PNG <- file.path(ITT_RESULTS_DIR, "Figure_3_within_ltfu_mortality_forest.png")
+RETR_PNG <- file.path(ITT_RESULTS_DIR, "Figure_S_within_ltfu_retreatment_forest.png")
+ggsave(MORT_PNG, fig_mort, width = 9, height = 11.5, dpi = 300, bg = "white")
+ggsave(RETR_PNG, fig_retr, width = 9, height = 11.5, dpi = 300, bg = "white")
+cat(sprintf("[fig4] Wrote %s\n", MORT_PNG))
+cat(sprintf("[fig4] Wrote %s\n", RETR_PNG))
