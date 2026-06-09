@@ -189,9 +189,6 @@ def plot_curves(ax, cause):
 plot_curves(axes[0], 'TB-attributable')
 plot_curves(axes[1], 'Non-TB')
 axes[0].set_ylabel('Cumulative mortality (%)')
-fig.suptitle('Cause-specific late-window mortality in LTFU patients, by 6-month return status\n'
-             '(hybrid TB attribution; 6-month landmark; follow-up 6–24 months from LTFU)',
-             fontsize=12.5, fontweight='bold', y=1.02)
 fig.tight_layout()
 fig.savefig(OUT_PNG, dpi=300, bbox_inches='tight', facecolor='white')
 fig.savefig(OUT_PDF, bbox_inches='tight', facecolor='white')
