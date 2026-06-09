@@ -111,8 +111,6 @@ for ax, (lab, col, sev_lvl, ref_lvl) in zip(axes, strata_plot):
     for s_ in ('top','right'): ax.spines[s_].set_visible(False)
 
 axes[0].set_ylabel('Cumulative on-treatment mortality (%)')
-fig.suptitle('On-treatment 24-month mortality at m=3 landmark, by baseline severity',
-             fontsize=12.5, fontweight='bold', y=1.02)
 fig.tight_layout()
 fig.savefig(OUT_KM, dpi=300, bbox_inches='tight', facecolor='white')
 fig.savefig(OUT_PDF, bbox_inches='tight', facecolor='white')

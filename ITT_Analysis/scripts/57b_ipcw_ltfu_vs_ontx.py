@@ -221,8 +221,6 @@ o_ipw = km(ontx, f'On-treatment at m=3 (n={len(ontx):,})')
 plot(axes[1], l_ipw, o_ipw, 'B. IPCW (LTFU return-censored + weighted)')
 
 axes[0].set_ylabel('Cumulative mortality (%)')
-fig.suptitle('LTFU vs on-treatment mortality at m=3 landmark (24-month follow-up)',
-             fontsize=12.5, fontweight='bold', y=1.02)
 fig.tight_layout()
 fig.savefig(OUT_PNG, dpi=300, bbox_inches='tight', facecolor='white')
 fig.savefig(OUT_PDF, bbox_inches='tight', facecolor='white')

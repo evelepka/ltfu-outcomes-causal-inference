@@ -117,9 +117,6 @@ for ax, (label, col, sev_lvl, ref_lvl) in zip(axes, STRATA):
     for s_ in ('top','right'): ax.spines[s_].set_visible(False)
 axes[0].set_ylabel('Cumulative incidence (%)')
 
-fig.suptitle('Death on treatment versus LTFU as competing events, by baseline severity\n'
-             '(Aalen–Johansen cumulative incidence functions from start of treatment)',
-             fontsize=12.5, fontweight='bold', y=1.03)
 fig.tight_layout()
 fig.savefig(OUT_PNG, dpi=300, bbox_inches='tight', facecolor='white')
 fig.savefig(OUT_PDF, bbox_inches='tight', facecolor='white')
