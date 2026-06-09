@@ -23,3 +23,8 @@ manuscript/
 *.docx
 Draft_*.md
 Appendix_*.md
+
+# Local symlinks to GDrive data/results (machine-specific; never commit)
+/Data
+/ITT_Analysis/data
+/ITT_Analysis/results
