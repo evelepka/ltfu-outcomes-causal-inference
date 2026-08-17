@@ -1,30 +1,39 @@
-# Raw data files — not included (patient privacy)
-data/
-ITT_Analysis/data/
+# ---------------------------------------------------------------------------
+# PATIENT DATA NEVER GOES IN THIS REPO.
+# Individual-level TBweb/SIM records are shared via Google Drive only.
+# They carry sinan_clean (SINAN notification ID), dob, dod, death_date,
+# tx_city and address_type alongside HIV status, homelessness and
+# incarceration history -- directly identifying, and covered by an ethics
+# approval for secondary use that does not extend to publication.
+# ---------------------------------------------------------------------------
 Data/
+ITT_Analysis/data/
+ITT_Analysis/results_incl_no_tx_start_backup/
+**/cause_lookup*.csv
+**/itt_cohort*.csv
+**/imp_0*.csv
+**/analytic_*.csv
+**/*_ids.csv
 
-# Generated analysis outputs live in Google Drive, not in the repo.
-# Scripts write to $PROJECT_ROOT/ITT_Analysis/results/ which resolves to GDrive.
-# If that folder ever materializes locally, don't commit it.
-ITT_Analysis/results/
+# Manuscript and internal reports are shared via Google Drive, not here
+*.docx
+*.doc
+*.gdoc
+~$*
 
-# Large cohort CSVs — not included
-abandonment_cohort*.csv
+# Superseded CCW v1 figures (produced before the cause-attribution fix)
+Figure_CCW_*.png
 
-# Python cache
+.DS_Store
 __pycache__/
 *.pyc
-*.pyo
-.DS_Store
 
-# Manuscript drafts and appendix live only on the shared Google Drive,
-# not in this repo. Do not track .docx / .md drafts here.
-manuscript/
-*.docx
-Draft_*.md
-Appendix_*.md
-
-# Local symlinks to GDrive data/results (machine-specific; never commit)
-/Data
-/ITT_Analysis/data
-/ITT_Analysis/results
+# ---------------------------------------------------------------------------
+# Project working notes stay in Google Drive, not in this repo.
+# ---------------------------------------------------------------------------
+docs/
+CLAUDE.md
+check.sh
+.claude/
+tools/*
+!tools/check_no_patient_data.py

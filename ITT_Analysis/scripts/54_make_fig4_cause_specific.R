@@ -1,4 +1,6 @@
 # 54. Figure 5 — Cause-specific mortality (TB vs non-TB) target-trial
+# 2026-08-16: now reads *_fixedattr.csv (Obito outcome from ANY episode).
+# Outputs carry a _fixedattr suffix; the pre-fix figures are retained.
 # ==============================================================================
 # Main-manuscript figure: hybrid attribution (SIM ICD-10 + TBweb Obito TB/NTB).
 # Appendix sensitivity (SIM-only attribution) saved separately.
@@ -22,12 +24,12 @@ suppressPackageStartupMessages({
 }
 source(file.path(.here(), "_paths.R"))
 
-OUT_PNG     <- file.path(ITT_RESULTS_DIR, "Figure_4_cause_specific.png")
-OUT_PDF     <- file.path(ITT_RESULTS_DIR, "Figure_4_cause_specific.pdf")
-OUT_APP_PNG <- file.path(ITT_RESULTS_DIR, "Figure_S_cause_specific_simonly.png")
-OUT_APP_PDF <- file.path(ITT_RESULTS_DIR, "Figure_S_cause_specific_simonly.pdf")
+OUT_PNG     <- file.path(ITT_RESULTS_DIR, "Figure_4_cause_specific_fixedattr.png")
+OUT_PDF     <- file.path(ITT_RESULTS_DIR, "Figure_4_cause_specific_fixedattr.pdf")
+OUT_APP_PNG <- file.path(ITT_RESULTS_DIR, "Figure_S_cause_specific_simonly_fixedattr.png")
+OUT_APP_PDF <- file.path(ITT_RESULTS_DIR, "Figure_S_cause_specific_simonly_fixedattr.pdf")
 
-cs_path <- file.path(ITT_RESULTS_DIR, "target_trial_defnB_cause_specific.csv")
+cs_path <- file.path(ITT_RESULTS_DIR, "target_trial_defnB_cause_specific_fixedattr.csv")
 if (!file.exists(cs_path)) stop(sprintf("Missing %s (run 30i)", cs_path))
 cs <- read.csv(cs_path, stringsAsFactors = FALSE)
 cs$Month <- as.numeric(gsub("Month_", "", cs$Trial_Month))

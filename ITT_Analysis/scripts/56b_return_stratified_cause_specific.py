@@ -24,13 +24,18 @@ import re
 import matplotlib.pyplot as plt
 from lifelines import KaplanMeierFitter, CoxPHFitter
 
-BASE = Path('/Users/jasonandrews/Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/'
-            '.shortcut-targets-by-id/18HafZqxrHeLVzpA6oYW-1cro9ygNfwVd/Abandonment Paper')
+# Project root: env override, else resolve relative to this file. The previous
+# hardcoded absolute path pointed at 'Abandonment Paper', but the shared folder
+# is now 'LTFU Paper', so the script could not open its own inputs. 22 of the
+# 24 Python scripts in this directory still carry the stale path .
+import os
+BASE = Path(os.environ.get("TB_ABANDONMENT_ROOT", "")) if os.environ.get(
+    "TB_ABANDONMENT_ROOT") else Path(__file__).resolve().parents[2]
 RAW    = BASE/'Data'/'Final_table_cleaned.csv'
 COHORT = BASE/'ITT_Analysis'/'data'/'itt_cohort.csv'
-OUT_CSV = BASE/'ITT_Analysis'/'results'/'return_stratified_cause_specific.csv'
-OUT_PNG = BASE/'ITT_Analysis'/'results'/'return_stratified_km_cause_specific.png'
-OUT_PDF = BASE/'ITT_Analysis'/'results'/'return_stratified_km_cause_specific.pdf'
+OUT_CSV = BASE/'ITT_Analysis'/'results'/'return_stratified_cause_specific_fixedattr.csv'
+OUT_PNG = BASE/'ITT_Analysis'/'results'/'return_stratified_km_cause_specific_fixedattr.png'
+OUT_PDF = BASE/'ITT_Analysis'/'results'/'return_stratified_km_cause_specific_fixedattr.pdf'
 
 LANDMARK_YR = 0.5
 MAX_FU_YR   = 2.0
@@ -50,6 +55,21 @@ novo = raw[raw['case_type'].str.strip().str.lower().eq('novo')
            & ~raw['case_outcome'].isin(TRANSFER)].copy()
 novo = novo.sort_values('end_date')
 first_outcome = novo.drop_duplicates('sinan_clean', keep='first')[['sinan_clean','case_outcome']]
+
+# --- FIX (2026-08-16): take the Obito outcome from ANY episode ----------------
+# Index-only lookup cannot see an LTFU patient's death, because their index
+# episode closes as `Abandono`. 1,058 of 1,668 LTFU deaths (63.4%) are
+# recorded on a retreatment episode instead. Verified same-death (median
+# 0-day lag to death_date). This matters most HERE: without it, the
+# returner stratum is precisely the stratum whose causes get discarded.
+_ob = raw[raw['case_outcome'].astype(str).str.strip().isin(['Obito TB','Obito NTB'])]
+_ob = _ob.sort_values('end_date').drop_duplicates('sinan_clean', keep='last')[
+    ['sinan_clean','case_outcome']].rename(columns={'case_outcome':'_obito'})
+first_outcome = first_outcome.merge(_ob, on='sinan_clean', how='outer')
+first_outcome['case_outcome'] = first_outcome['_obito'].combine_first(
+    first_outcome['case_outcome'])
+first_outcome = first_outcome.drop(columns=['_obito'])
+print(f"[cause-fix] Obito outcome recovered from any episode for {len(_ob):,} individuals")
 
 deathrec = raw[raw['dod'].notna() & raw['cause_of_death_code'].notna()
                & raw['cause_of_death_code'].str.strip().ne('')].copy()
@@ -189,6 +209,9 @@ def plot_curves(ax, cause):
 plot_curves(axes[0], 'TB-attributable')
 plot_curves(axes[1], 'Non-TB')
 axes[0].set_ylabel('Cumulative mortality (%)')
+fig.suptitle('Cause-specific late-window mortality in LTFU patients, by 6-month return status\n'
+             '(hybrid TB attribution; 6-month landmark; follow-up 6–24 months from LTFU)',
+             fontsize=12.5, fontweight='bold', y=1.02)
 fig.tight_layout()
 fig.savefig(OUT_PNG, dpi=300, bbox_inches='tight', facecolor='white')
 fig.savefig(OUT_PDF, bbox_inches='tight', facecolor='white')
