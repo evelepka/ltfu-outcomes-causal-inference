@@ -78,6 +78,31 @@ novo <- novo[!is.na(novo$case_outcome)
              & !novo$case_outcome %in% TRANSFER, ]
 novo <- novo[order(novo$end_date), ]
 first <- novo[!duplicated(novo$sinan_clean), c("sinan_clean", "case_outcome")]
+# --- FIX (2026-08-16): take the Obito outcome from ANY episode ---------------
+# The block above finds the INDEX (first Novo) episode outcome. An LTFU
+# patient's index episode closes as `Abandono`, which can never be
+# `Obito TB`/`Obito NTB` -- so index-only lookup discarded TBweb cause of
+# death for 1,058 of 1,668 LTFU deaths (63.4%), all recorded on their
+# retreatment episode (`Retr Aband`, `Recidiva`). Verified same-death:
+# |Obito episode end_date - cohort death_date| median 0 d, 99.9% within 30 d.
+# Effect of the defect: the LTFU arm lost ~45% of its deaths to
+# cause-specific censoring vs ~5% in the non-LTFU arm, deflating every
+# TB-specific hazard ratio.
+# SIM precedence is unchanged (classify_cod only consults case_outcome when
+# the SIM code is absent), so this only ADDS attribution where there was none.
+obito <- raw[!is.na(raw$case_outcome)
+             & trimws(raw$case_outcome) %in% c("Obito TB", "Obito NTB"), ]
+obito <- obito[order(obito$end_date), ]
+obito <- obito[!duplicated(obito$sinan_clean, fromLast = TRUE),
+               c("sinan_clean", "case_outcome")]
+names(obito)[2] <- "obito_outcome"
+first <- merge(first, obito, by = "sinan_clean", all = TRUE)
+first$case_outcome <- ifelse(!is.na(first$obito_outcome),
+                             first$obito_outcome, first$case_outcome)
+first$obito_outcome <- NULL
+cat(sprintf("[cause-fix] Obito outcome recovered from any episode for %d individuals\n",
+            nrow(obito)))
+
 
 # Last record with both dod and cause_of_death_code per individual
 deathrec <- raw[!is.na(raw$dod) & !is.na(raw$cause_of_death_code) & nzchar(raw$cause_of_death_code), ]
@@ -249,7 +274,7 @@ for (m in 1:6) {
 }
 
 final_df <- bind_rows(rows)
-out_path <- file.path(ITT_RESULTS_DIR, "target_trial_grace_cause_specific.csv")
+out_path <- file.path(ITT_RESULTS_DIR, "target_trial_grace_cause_specific_fixedattr.csv")
 write.csv(final_df, out_path, row.names = FALSE)
 cat(sprintf("\n[30e] Wrote %d rows to %s\n", nrow(final_df), out_path))
 
