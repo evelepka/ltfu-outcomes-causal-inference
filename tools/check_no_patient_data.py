@@ -10,13 +10,46 @@ mistake here is not reversible.
 
 Exit 0 = safe to push. Exit 1 = STOP.
 """
-import csv, os, subprocess, sys
+import csv, os, re, subprocess, sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
 
 IDENT = {"sinan_clean", "sinan_padded", "sinan_original", "dob", "dod",
          "death_date", "tx_city", "address_type", "notification_date",
          "best_start", "end_date"}
 MAX_CSV_ROWS = 1000          # aggregate result tables are tens of rows
 MAX_NONFIG_BYTES = 2_000_000
+
+
+# ---------------------------------------------------------------------------
+# The CLAUDE.md in THIS repo is the public one: repo layout and the
+# data-never-here rule. The project's working CLAUDE.md lives in Google Drive and
+# carries the journal submission ID, reviewer state and unpublished estimates.
+# Copying the private one over this one would publish all of that, so fail loudly.
+# ---------------------------------------------------------------------------
+PRIVATE_MARKERS = [
+    (r"PMEDICINE-D-\d", "journal submission identifier"),
+    (r"\bReviewer\s*[#0-9]", "reviewer references (peer review is confidential)"),
+    (r"\baHR\s*\d\.\d", "adjusted hazard ratio estimate"),
+    (r"\blate aHR\b", "unpublished effect estimate"),
+    (r"Plos Medicine/R1", "revision working directory"),
+]
+
+
+def check_public_claude_md():
+    p = ROOT / "CLAUDE.md"
+    if not p.exists():
+        return []
+    t = p.read_text(errors="replace")
+    out = []
+    for pat, why in PRIVATE_MARKERS:
+        m = re.search(pat, t)
+        if m:
+            out.append(f"CLAUDE.md contains {why} ({m.group(0)!r}). This file is "
+                       f"PUBLIC. The working CLAUDE.md belongs in Google Drive only.")
+    return out
+
 
 def main():
     files = subprocess.run(["git", "ls-files"], capture_output=True,
@@ -45,6 +78,7 @@ def main():
         if rows > MAX_CSV_ROWS:
             fails.append(f"{f} has {rows:,} rows (>{MAX_CSV_ROWS}); "
                          f"aggregate tables only")
+    fails.extend(check_public_claude_md())
     print(f"check_no_patient_data: {len(files):,} tracked files")
     for x in fails:
         print(f"  FAIL  {x}")
