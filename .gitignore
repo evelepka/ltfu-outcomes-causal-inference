@@ -24,6 +24,9 @@ ITT_Analysis/results_incl_no_tx_start_backup/
 # Superseded CCW v1 figures (produced before the cause-attribution fix)
 Figure_CCW_*.png
 
+# IBGE source workbook: re-downloaded by 47_build_ibge_typology.py
+ITT_Analysis/external/*.xlsx
+
 .DS_Store
 __pycache__/
 *.pyc
@@ -37,3 +40,6 @@ check.sh
 .claude/
 tools/*
 !tools/check_no_patient_data.py
+# 48_make_literature_docx.py stays in Google Drive: it hardcodes the manuscript's
+# effect estimates and the prior-literature comparison, i.e. unpublished results.
+ITT_Analysis/scripts/48_make_literature_docx.py

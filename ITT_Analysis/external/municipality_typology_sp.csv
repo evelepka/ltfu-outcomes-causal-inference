@@ -1,0 +1,644 @@
+municipality,ibge_tipo,geo_class,geo4,cd_gcmun
+OURINHOS,Urbano,Urbano,Urbano,3534708
+DETENTO,NotAMunicipality,Prison,Urbano,
+SAO PAULO,Urbano,Sao Paulo city,Sao Paulo city,3550308
+SALTO GRANDE,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3545407
+BARRETOS,Urbano,Urbano,Urbano,3505500
+ASSIS,Urbano,Urbano,Urbano,3504008
+CAMPINAS,Urbano,Urbano,Urbano,3509502
+RIBEIRAO PRETO,Urbano,Urbano,Urbano,3543402
+SANTA CRUZ DO RIO PARDO,Urbano,Urbano,Urbano,3546405
+ARACATUBA,Urbano,Urbano,Urbano,3502804
+ITAPIRA,Urbano,Urbano,Urbano,3522604
+PRAIA GRANDE,Urbano,Urbano,Urbano,3541000
+JAU,Urbano,Urbano,Urbano,3525300
+SANTOS,Urbano,Urbano,Urbano,3548500
+BARRA BONITA,Urbano,Urbano,Urbano,3505302
+BAURU,Urbano,Urbano,Urbano,3506003
+DRACENA,Urbano,Urbano,Urbano,3514403
+FRANCISCO MORATO,Urbano,Urbano,Urbano,3516309
+ILHA COMPRIDA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3520426
+BARUERI,Urbano,Urbano,Urbano,3505708
+CARAPICUIBA,Urbano,Urbano,Urbano,3510609
+ITAPEVI,Urbano,Urbano,Urbano,3522505
+CUBATAO,Urbano,Urbano,Urbano,3513504
+GUARUJA,Urbano,Urbano,Urbano,3518701
+ARUJA,Urbano,Urbano,Urbano,3503901
+FERRAZ DE VASCONCELOS,Urbano,Urbano,Urbano,3515707
+ORIENTE,Urbano,Urbano,Urbano,3534104
+OSASCO,Urbano,Urbano,Urbano,3534401
+JUQUITIBA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3526209
+TARUMA,Urbano,Urbano,Urbano,3553955
+IBIRAREMA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3519501
+OLEO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3533809
+TIMBURI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3554607
+RIBEIRAO PIRES,Urbano,Urbano,Urbano,3543303
+SAO PEDRO DO TURVO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3550506
+FLORINEA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3516101
+JANDIRA,Urbano,Urbano,Urbano,3525003
+SANTO ANDRE,Urbano,Urbano,Urbano,3547809
+COROADOS,Urbano,Urbano,Urbano,3512506
+SAO VICENTE,Urbano,Urbano,Urbano,3551009
+COSMOPOLIS,Urbano,Urbano,Urbano,3512803
+MOGI GUACU,Urbano,Urbano,Urbano,3530706
+MONTE ALTO,Urbano,Urbano,Urbano,3531308
+PRESIDENTE PRUDENTE,Urbano,Urbano,Urbano,3541406
+ITAPECERICA DA SERRA,Urbano,Urbano,Urbano,3522208
+PEREIRA BARRETO,Urbano,Urbano,Urbano,3537404
+ITAPETININGA,Urbano,Urbano,Urbano,3522307
+SAO JOSE DO RIO PARDO,Urbano,Urbano,Urbano,3549706
+OSVALDO CRUZ,Urbano,Urbano,Urbano,3534609
+ADAMANTINA,Urbano,Urbano,Urbano,3500105
+BURITAMA,Urbano,Urbano,Urbano,3508108
+PENAPOLIS,Urbano,Urbano,Urbano,3537305
+ANDRADINA,Urbano,Urbano,Urbano,3502101
+MIRANDOPOLIS,Urbano,Urbano,Urbano,3530102
+SAO JOSE DO RIO PRETO,Urbano,Urbano,Urbano,3549805
+GUARACAI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3517802
+ITU,Urbano,Urbano,Urbano,3523909
+PORTO FELIZ,Urbano,Urbano,Urbano,3540606
+VIRADOURO,Urbano,Urbano,Urbano,3556800
+GUAIRA,Urbano,Urbano,Urbano,3517406
+COLOMBIA,Urbano,Urbano,Urbano,3512100
+SANTA FE DO SUL,Urbano,Urbano,Urbano,3546603
+BEBEDOURO,Urbano,Urbano,Urbano,3506102
+CAIEIRAS,Urbano,Urbano,Urbano,3509007
+PILAR DO SUL,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3537909
+SALTO DE PIRAPORA,Urbano,Urbano,Urbano,3545308
+SAO JOSE DOS CAMPOS,Urbano,Urbano,Urbano,3549904
+PIEDADE,RuralAdjacente,RuralAdjacente,RuralAdjacente,3537800
+SOROCABA,Urbano,Urbano,Urbano,3552205
+CAPELA DO ALTO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3510302
+COLINA,Urbano,Urbano,Urbano,3512001
+SALTO,Urbano,Urbano,Urbano,3545209
+PAULINIA,Urbano,Urbano,Urbano,3536505
+MAIRINQUE,Urbano,Urbano,Urbano,3528403
+IPERO,Urbano,Urbano,Urbano,3521002
+PIRASSUNUNGA,Urbano,Urbano,Urbano,3539301
+POMPEIA,Urbano,Urbano,Urbano,3540002
+BRODOWSKI,Urbano,Urbano,Urbano,3507803
+GUARATINGUETA,Urbano,Urbano,Urbano,3518404
+ITIRAPINA,Urbano,Urbano,Urbano,3523602
+BASTOS,Urbano,Urbano,Urbano,3505807
+TUPA,Urbano,Urbano,Urbano,3555000
+CRAVINHOS,Urbano,Urbano,Urbano,3513108
+SANTA CRUZ DAS PALMEIRAS,Urbano,Urbano,Urbano,3546306
+PARAPUA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3536000
+QUINTANA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3542008
+TATUI,Urbano,Urbano,Urbano,3554003
+ALTINOPOLIS,Urbano,Urbano,Urbano,3501004
+ECHAPORA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3514700
+GUARULHOS,Urbano,Urbano,Urbano,3518800
+GUARIBA,Urbano,Urbano,Urbano,3518602
+MORRO AGUDO,Urbano,Urbano,Urbano,3531902
+MONGAGUA,Urbano,Urbano,Urbano,3531100
+ITATIBA,Urbano,Urbano,Urbano,3523404
+LIMEIRA,Urbano,Urbano,Urbano,3526902
+SUMARE,Urbano,Urbano,Urbano,3552403
+TAUBATE,Urbano,Urbano,Urbano,3554102
+CARAGUATATUBA,Urbano,Urbano,Urbano,3510500
+SANTA ISABEL,Urbano,Urbano,Urbano,3546801
+CABREUVA,Urbano,Urbano,Urbano,3508405
+PRACINHA,Urbano,Urbano,Urbano,3540853
+LOUVEIRA,Urbano,Urbano,Urbano,3527306
+ITANHAEM,Urbano,Urbano,Urbano,3522109
+BERTIOGA,Urbano,Urbano,Urbano,3506359
+MAUA,Urbano,Urbano,Urbano,3529401
+PERUIBE,Urbano,Urbano,Urbano,3537602
+JARINU,Urbano,Urbano,Urbano,3525201
+COTIA,Urbano,Urbano,Urbano,3513009
+SAO BERNARDO DO CAMPO,Urbano,Urbano,Urbano,3548708
+SALMOURAO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3545100
+GARCA,Urbano,Urbano,Urbano,3516705
+PLATINA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3539707
+VARGEM GRANDE PAULISTA,Urbano,Urbano,Urbano,3556453
+MOCOCA,Urbano,Urbano,Urbano,3530508
+MOGI-MIRIM,Urbano,Urbano,Urbano,3530805
+VARGEM GRANDE DO SUL,Urbano,Urbano,Urbano,3556404
+TAMBAU,Urbano,Urbano,Urbano,3553302
+RIO DAS PEDRAS,Urbano,Urbano,Urbano,3544004
+DIADEMA,Urbano,Urbano,Urbano,3513801
+FRANCA,Urbano,Urbano,Urbano,3516200
+JUNDIAI,Urbano,Urbano,Urbano,3525904
+SAO JOAO DA BOA VISTA,Urbano,Urbano,Urbano,3549102
+AGUAI,Urbano,Urbano,Urbano,3500303
+ESPIRITO SANTO DO PINHAL,Urbano,Urbano,Urbano,3515186
+ITARARE,Urbano,Urbano,Urbano,3523206
+ITAPEVA,Urbano,Urbano,Urbano,3522406
+EMBU,Urbano,Urbano,Urbano,3515004
+BURI,Urbano,Urbano,Urbano,3508009
+VOTORANTIM,Urbano,Urbano,Urbano,3557006
+GUAPIARA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3517604
+NOVA CAMPINA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3532827
+TABOAO DA SERRA,Urbano,Urbano,Urbano,3552809
+RIBEIRAO BRANCO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3543006
+SERTAOZINHO,Urbano,Urbano,Urbano,3551702
+SANTA BARBARA D OESTE,Urbano,Urbano,Urbano,3545803
+PEDERNEIRAS,Urbano,Urbano,Urbano,3536703
+MARILIA,Urbano,Urbano,Urbano,3529005
+INDAIATUBA,Urbano,Urbano,Urbano,3520509
+CERQUILHO,Urbano,Urbano,Urbano,3511508
+SAO SEBASTIAO,Urbano,Urbano,Urbano,3550704
+SAGRES,RuralAdjacente,RuralAdjacente,RuralAdjacente,3544707
+MIRASSOLANDIA,Urbano,Urbano,Urbano,3530409
+JACAREI,Urbano,Urbano,Urbano,3524402
+FERNANDOPOLIS,Urbano,Urbano,Urbano,3515509
+DUMONT,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3514601
+SAO SIMAO,Urbano,Urbano,Urbano,3550902
+FLORIDA PAULISTA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3516002
+LENCOIS PAULISTA,Urbano,Urbano,Urbano,3526803
+JABOTICABAL,Urbano,Urbano,Urbano,3524303
+LEME,Urbano,Urbano,Urbano,3526704
+APARECIDA,Urbano,Urbano,Urbano,3502507
+IGARAPAVA,Urbano,Urbano,Urbano,3520103
+CRUZEIRO,Urbano,Urbano,Urbano,3513405
+AMERICO BRASILIENSE,Urbano,Urbano,Urbano,3501707
+SAO MANUEL,Urbano,Urbano,Urbano,3550100
+IEPE,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3519907
+TREMEMBE,Urbano,Urbano,Urbano,3554805
+HORTOLANDIA,Urbano,Urbano,Urbano,3519071
+CAJAMAR,Urbano,Urbano,Urbano,3509205
+CATANDUVA,Urbano,Urbano,Urbano,3511102
+AVARE,Urbano,Urbano,Urbano,3504503
+ITAI,Urbano,Urbano,Urbano,3521804
+CASTILHO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3511003
+MAIRIPORA,Urbano,Urbano,Urbano,3528502
+SAO CARLOS,Urbano,Urbano,Urbano,3548906
+MARACAI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3528809
+ARACOIABA DA SERRA,Urbano,Urbano,Urbano,3502903
+MOGI DAS CRUZES,Urbano,Urbano,Urbano,3530607
+ARAMINA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3503000
+UBATUBA,Urbano,Urbano,Urbano,3555406
+ATIBAIA,Urbano,Urbano,Urbano,3504107
+TACIBA,Urbano,Urbano,Urbano,3552908
+SANTANA DE PARNAIBA,Urbano,Urbano,Urbano,3547304
+AMERICANA,Urbano,Urbano,Urbano,3501608
+EMBU-GUACU,Urbano,Urbano,Urbano,3515103
+BOTUCATU,Urbano,Urbano,Urbano,3507506
+ILHABELA,Urbano,Urbano,Urbano,3520400
+CAMPOS DO JORDAO,Urbano,Urbano,Urbano,3509700
+RINOPOLIS,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3543808
+QUEIROZ,RuralAdjacente,RuralAdjacente,RuralAdjacente,3541802
+PEDREGULHO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3537008
+RIFAINA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3543600
+CRISTAIS PAULISTA,Urbano,Urbano,Urbano,3513207
+ENGENHEIRO COELHO,Urbano,Urbano,Urbano,3515152
+ITUVERAVA,Urbano,Urbano,Urbano,3524105
+POA,Urbano,Urbano,Urbano,3539806
+FRANCO DA ROCHA,Urbano,Urbano,Urbano,3516408
+SAO CAETANO DO SUL,Urbano,Urbano,Urbano,3548807
+ITAQUAQUECETUBA,Urbano,Urbano,Urbano,3523107
+SUZANO,Urbano,Urbano,Urbano,3552502
+PIRACAIA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3538600
+ALVARO DE CARVALHO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3501400
+VERA CRUZ,Urbano,Urbano,Urbano,3556602
+OCAUCU,RuralAdjacente,RuralAdjacente,RuralAdjacente,3533700
+UBIRAJARA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3555505
+VOTUPORANGA,Urbano,Urbano,Urbano,3557105
+MIGUELOPOLIS,Urbano,Urbano,Urbano,3529708
+MONTE APRAZIVEL,Urbano,Urbano,Urbano,3531407
+PALMARES PAULISTA,Urbano,Urbano,Urbano,3535101
+JACI,Urbano,Urbano,Urbano,3524501
+OLIMPIA,Urbano,Urbano,Urbano,3533908
+ITAJOBI,Urbano,Urbano,Urbano,3521903
+ALVINLANDIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3501509
+UNIAO PAULISTA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3555703
+JOSE BONIFACIO,Urbano,Urbano,Urbano,3525706
+GUZOLANDIA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3518909
+BENTO DE ABREU,RuralAdjacente,RuralAdjacente,RuralAdjacente,3506201
+ILHA SOLTEIRA,Urbano,Urbano,Urbano,3520442
+AVANHANDAVA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3504404
+VARZEA PAULISTA,Urbano,Urbano,Urbano,3556503
+VALINHOS,Urbano,Urbano,Urbano,3556206
+MONTE MOR,Urbano,Urbano,Urbano,3531803
+BIRIGUI,Urbano,Urbano,Urbano,3506508
+PINHALZINHO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3538204
+BRAGANCA PAULISTA,Urbano,Urbano,Urbano,3507605
+SERRANA,Urbano,Urbano,Urbano,3551504
+PITANGUEIRAS,Urbano,Urbano,Urbano,3539509
+SUD MENNUCCI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3552304
+SANTA RITA DO PASSA QUATRO,Urbano,Urbano,Urbano,3547502
+BATATAIS,Urbano,Urbano,Urbano,3505906
+JARDINOPOLIS,Urbano,Urbano,Urbano,3525102
+PONTAL,Urbano,Urbano,Urbano,3540200
+TAQUARITINGA,Urbano,Urbano,Urbano,3553708
+BARRINHA,Urbano,Urbano,Urbano,3505609
+PORTO FERREIRA,Urbano,Urbano,Urbano,3540705
+SAO ROQUE,Urbano,Urbano,Urbano,3550605
+ARACARIGUAMA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3502754
+RIO GRANDE DA SERRA,Urbano,Urbano,Urbano,3544103
+VALPARAISO,Urbano,Urbano,Urbano,3556305
+AURIFLAMA,Urbano,Urbano,Urbano,3504206
+BREJO ALEGRE,Urbano,Urbano,Urbano,3507753
+BERNARDINO DE CAMPOS,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3506300
+NOVA ODESSA,Urbano,Urbano,Urbano,3533403
+PEDREIRA,Urbano,Urbano,Urbano,3537107
+ITUPEVA,Urbano,Urbano,Urbano,3524006
+MIRASSOL,Urbano,Urbano,Urbano,3530300
+DESCALVADO,Urbano,Urbano,Urbano,3513702
+SANTOPOLIS DO AGUAPEI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3548401
+JUNQUEIROPOLIS,Urbano,Urbano,Urbano,3526001
+PRESIDENTE VENCESLAU,Urbano,Urbano,Urbano,3541505
+GUARARAPES,Urbano,Urbano,Urbano,3518206
+MIRANTE DO PARANAPANEMA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3530201
+GUAPIACU,Urbano,Urbano,Urbano,3517505
+COSMORAMA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3512902
+PRESIDENTE EPITACIO,Urbano,Urbano,Urbano,3541307
+LAVINIA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3526506
+IPIGUA,Urbano,Urbano,Urbano,3521150
+GUARACI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3517901
+MONTE CASTELO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3531605
+OUROESTE,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3534757
+NEVES PAULISTA,Urbano,Urbano,Urbano,3532504
+BRAUNA,Urbano,Urbano,Urbano,3507704
+ARIRANHA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3503703
+SAO FRANCISCO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3549003
+JALES,Urbano,Urbano,Urbano,3524808
+TRES FRONTEIRAS,Urbano,Urbano,Urbano,3554904
+ESTRELA D'OESTE,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3515202
+LAGOINHA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3526308
+INDIAPORA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3520707
+CEDRAL,Urbano,Urbano,Urbano,3511300
+URANIA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3555802
+JAGUARIUNA,Urbano,Urbano,Urbano,3524709
+MATAO,Urbano,Urbano,Urbano,3529302
+ARARAQUARA,Urbano,Urbano,Urbano,3503208
+SANTA ALBERTINA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3545704
+SANTA CLARA D OESTE,Urbano,Urbano,Urbano,3546108
+SANTA RITA D'OESTE,Urbano,Urbano,Urbano,3547403
+CAPAO BONITO,Urbano,Urbano,Urbano,3510203
+CESARIO LANGE,RuralAdjacente,RuralAdjacente,RuralAdjacente,3511607
+SARAPUI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3551108
+RIBEIRAO GRANDE,RuralAdjacente,RuralAdjacente,RuralAdjacente,3543253
+PIRATININGA,Urbano,Urbano,Urbano,3539400
+SAO MIGUEL ARCANJO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3550209
+BALBINOS,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3504701
+PALMEIRA D'OESTE,RuralAdjacente,RuralAdjacente,RuralAdjacente,3535200
+TAQUARITUBA,Urbano,Urbano,Urbano,3553807
+LARANJAL PAULISTA,Urbano,Urbano,Urbano,3526407
+ANHEMBI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3502309
+CONCHAS,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3512308
+PARANAPANEMA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3535804
+TAGUAI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3553005
+PONTALINDA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3540259
+PINDAMONHANGABA,Urbano,Urbano,Urbano,3538006
+ROSANA,Urbano,Urbano,Urbano,3544251
+ALVARES MACHADO,Urbano,Urbano,Urbano,3501301
+MARTINOPOLIS,Urbano,Urbano,Urbano,3529203
+PIRAPOZINHO,Urbano,Urbano,Urbano,3539202
+TARABAI,Urbano,Urbano,Urbano,3553906
+PANORAMA,Urbano,Urbano,Urbano,3535408
+SANTO ANASTACIO,Urbano,Urbano,Urbano,3547700
+PORANGABA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3540507
+GUAIMBE,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3517307
+SANTO EXPEDITO,Urbano,Urbano,Urbano,3548302
+REGENTE FEIJO,Urbano,Urbano,Urbano,3542404
+CUNHA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3513603
+QUELUZ,RuralAdjacente,RuralAdjacente,RuralAdjacente,3541901
+POTIM,Urbano,Urbano,Urbano,3540754
+PIQUETE,Urbano,Urbano,Urbano,3538501
+ITIRAPUA,Urbano,Urbano,Urbano,3523701
+RESTINGA,Urbano,Urbano,Urbano,3542701
+RIO CLARO,Urbano,Urbano,Urbano,3543907
+PIRACICABA,Urbano,Urbano,Urbano,3538709
+CHARQUEADA,Urbano,Urbano,Urbano,3511706
+SALTINHO,Urbano,Urbano,Urbano,3545159
+LORENA,Urbano,Urbano,Urbano,3527207
+CAPIVARI,Urbano,Urbano,Urbano,3510401
+SANTA GERTRUDES,Urbano,Urbano,Urbano,3546702
+CORDEIROPOLIS,Urbano,Urbano,Urbano,3512407
+TIETE,Urbano,Urbano,Urbano,3554508
+RAFARD,Urbano,Urbano,Urbano,3542107
+BOITUVA,Urbano,Urbano,Urbano,3507001
+TORRINHA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3554706
+LAVRINHAS,Urbano,Urbano,Urbano,3526605
+CONCHAL,Urbano,Urbano,Urbano,3512209
+MOMBUCA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3530904
+BANANAL,RuralAdjacente,RuralAdjacente,RuralAdjacente,3504909
+ARTUR NOGUEIRA,Urbano,Urbano,Urbano,3503802
+SAO PEDRO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3550407
+SANTA BRANCA,Urbano,Urbano,Urbano,3546009
+SANTA ROSA DE VITERBO,Urbano,Urbano,Urbano,3547601
+GUARANTA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3518107
+TAQUARAL,RuralAdjacente,RuralAdjacente,RuralAdjacente,3553658
+JABORANDI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3524204
+TERRA ROXA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3554409
+IPAUSSU,Urbano,Urbano,Urbano,3520905
+MONTE AZUL PAULISTA,Urbano,Urbano,Urbano,3531506
+CANITAR,Urbano,Urbano,Urbano,3510153
+PRADOPOLIS,Urbano,Urbano,Urbano,3540903
+NOVA GRANADA,Urbano,Urbano,Urbano,3533007
+CAJOBI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3509304
+SANTA ERNESTINA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3546504
+CATIGUA,Urbano,Urbano,Urbano,3511201
+ARARAS,Urbano,Urbano,Urbano,3503307
+CANDIDO MOTA,Urbano,Urbano,Urbano,3510005
+PALMITAL,Urbano,Urbano,Urbano,3535309
+PARAGUACU PAULISTA,Urbano,Urbano,Urbano,3535507
+ITAJU,RuralAdjacente,RuralAdjacente,RuralAdjacente,3522000
+GUARA,Urbano,Urbano,Urbano,3517703
+CERQUEIRA CESAR,Urbano,Urbano,Urbano,3511409
+PARAIBUNA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3535606
+BARIRI,Urbano,Urbano,Urbano,3505203
+PIRAJUI,Urbano,Urbano,Urbano,3538907
+AGUDOS,Urbano,Urbano,Urbano,3500709
+CAFELANDIA,Urbano,Urbano,Urbano,3508801
+GETULINA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3517000
+SALES OLIVEIRA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3544905
+MACATUBA,Urbano,Urbano,Urbano,3528007
+IACANGA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3519105
+BROTAS,Urbano,Urbano,Urbano,3507902
+AVAI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3504305
+ORLANDIA,Urbano,Urbano,Urbano,3534302
+DUARTINA,Urbano,Urbano,Urbano,3514502
+LINS,Urbano,Urbano,Urbano,3527108
+PROMISSAO,Urbano,Urbano,Urbano,3541604
+REGINOPOLIS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3542503
+AREALVA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3503406
+MIRACATU,RuralAdjacente,RuralAdjacente,RuralAdjacente,3529906
+IGARACU DO TIETE,Urbano,Urbano,Urbano,3520004
+IBIUNA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3519709
+BOM JESUS DOS PERDOES,Urbano,Urbano,Urbano,3507100
+ITAPOLIS,Urbano,Urbano,Urbano,3522703
+GUAICARA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3517208
+SOCORRO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3552106
+BOCAINA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3506805
+LUCIANOPOLIS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3527504
+JUQUIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3526100
+ALUMINIO,Urbano,Urbano,Urbano,3501152
+ITAPUI,Urbano,Urbano,Urbano,3522901
+SANTO ANTONIO DA ALEGRIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3547908
+CAJURU,Urbano,Urbano,Urbano,3509403
+SERRA AZUL,Urbano,Urbano,Urbano,3551405
+SAO JOAQUIM DA BARRA,Urbano,Urbano,Urbano,3549409
+TAQUARIVAI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3553856
+ANGATUBA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3502200
+ITABERA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3521705
+MONTE ALEGRE DO SUL,Urbano,Urbano,Urbano,3531209
+APIAI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3502705
+SERRA NEGRA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3551603
+BARRA DO CHAPEU,RuralAdjacente,RuralAdjacente,RuralAdjacente,3505351
+SARUTAIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3551207
+RIBEIRA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3542800
+RIVERSUL,RuralAdjacente,RuralAdjacente,RuralAdjacente,3543501
+IPEUNA,Urbano,Urbano,Urbano,3521101
+TABATINGA,Urbano,Urbano,Urbano,3552700
+REGISTRO,Urbano,Urbano,Urbano,3542602
+BORBOREMA,Urbano,Urbano,Urbano,3507407
+IBATE,Urbano,Urbano,Urbano,3519303
+IBITINGA,Urbano,Urbano,Urbano,3519600
+NOVA EUROPA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3532900
+SANTANA DA PONTE PENSA,Urbano,Urbano,Urbano,3547205
+PEDRANOPOLIS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3536901
+PARANAPUA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3535903
+BOA ESPERANCA DO SUL,Urbano,Urbano,Urbano,3506706
+IGUAPE,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3520301
+PEDRO DE TOLEDO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3537206
+ELDORADO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3514809
+SETE BARRAS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3551801
+ITARIRI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3523305
+CAJATI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3509254
+PARIQUERA-ACU,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3536208
+CANANEIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3509908
+JACUPIRANGA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3524600
+BARRA DO TURVO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3505401
+IRACEMAPOLIS,Urbano,Urbano,Urbano,3521408
+LUCELIA,Urbano,Urbano,Urbano,3527405
+IACRI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3519204
+AGUAS DE LINDOIA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3500501
+IPORANGA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3521200
+GALIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3516606
+LINDOIA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3527009
+JOANOPOLIS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3525508
+SAO JOAO DO PAU D'ALHO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3549300
+VINHEDO,Urbano,Urbano,Urbano,3556701
+AMPARO,Urbano,Urbano,Urbano,3501905
+GUAREI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3518503
+MORUNGABA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3532009
+PRESIDENTE ALVES,RuralAdjacente,RuralAdjacente,RuralAdjacente,3541109
+DIVINOLANDIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3513900
+HOLAMBRA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3519055
+PEDRA BELA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3536802
+ELIAS FAUSTO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3514908
+SANTA MARIA DA SERRA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3547007
+VARGEM,RuralAdjacente,RuralAdjacente,RuralAdjacente,3556354
+PIRAPORA DO BOM JESUS,Urbano,Urbano,Urbano,3539103
+CAMPO LIMPO PAULISTA,Urbano,Urbano,Urbano,3509601
+ITATINGA,Urbano,Urbano,Urbano,3523503
+PARDINHO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3536109
+ITAPORANGA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3522802
+BOFETE,RuralAdjacente,RuralAdjacente,RuralAdjacente,3506904
+AREIOPOLIS,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3503604
+FARTURA,Urbano,Urbano,Urbano,3515400
+PACAEMBU,Urbano,Urbano,Urbano,3534906
+PAULICEIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3536406
+CAIUA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3509106
+PIRAJU,Urbano,Urbano,Urbano,3538808
+TEJUPA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3554201
+AGUAS DE SANTA BARBARA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3500550
+PEREIRAS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3537503
+CORONEL MACEDO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3512605
+CACAPAVA,Urbano,Urbano,Urbano,3508504
+BARAO DE ANTONINA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3505005
+IGARATA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3520202
+BIRITIBA-MIRIM,Urbano,Urbano,Urbano,3506607
+DOIS CORREGOS,Urbano,Urbano,Urbano,3514106
+MIRA ESTRELA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3530003
+TURMALINA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3555307
+GUARAREMA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3518305
+SAO LUIS DO PARAITINGA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3550001
+IRAPURU,RuralAdjacente,RuralAdjacente,RuralAdjacente,3521606
+SILVEIRAS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3552007
+AREIAS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3503505
+CACHOEIRA PAULISTA,Urbano,Urbano,Urbano,3508603
+JULIO MESQUITA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3525805
+HERCULANDIA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3519006
+SAO BENTO DO SAPUCAI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3548609
+CACONDE,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3508702
+CASA BRANCA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3510807
+SALESOPOLIS,Urbano,Urbano,Urbano,3545001
+SANTO ANTONIO DE POSSE,Urbano,Urbano,Urbano,3548005
+TUIUTI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3554953
+VALENTIM GENTIL,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3556107
+CARDOSO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3510708
+GENERAL SALGADO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3516903
+PINDORAMA,Urbano,Urbano,Urbano,3538105
+BADY BASSITT,Urbano,Urbano,Urbano,3504602
+RIOLANDIA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3544202
+POTIRENDABA,Urbano,Urbano,Urbano,3540804
+MACAUBAL,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3528106
+NHANDEARA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3532603
+TABAPUA,Urbano,Urbano,Urbano,3552601
+NOVO HORIZONTE,Urbano,Urbano,Urbano,3533502
+AMERICO DE CAMPOS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3501806
+TANABI,Urbano,Urbano,Urbano,3553401
+MACEDONIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3528205
+PAULO DE FARIA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3536604
+NOVA LUZITANIA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3533304
+IBIRA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3519402
+NOVA ALIANCA,Urbano,Urbano,Urbano,3532801
+UCHOA,Urbano,Urbano,Urbano,3555604
+UBARANA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3555356
+RUBINEIA,Urbano,Urbano,Urbano,3544509
+PALESTINA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3535002
+IRAPUA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3521507
+TEODORO SAMPAIO,Urbano,Urbano,Urbano,3554300
+OURO VERDE,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3534807
+TUPI PAULISTA,Urbano,Urbano,Urbano,3555109
+TAPIRAI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3553500
+RANCHARIA,Urbano,Urbano,Urbano,3542206
+ALAMBARI,Urbano,Urbano,Urbano,3500758
+SANTA MERCEDES,RuralAdjacente,RuralAdjacente,RuralAdjacente,3547106
+SAO SEBASTIAO DA GRAMA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3550803
+PIQUEROBI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3538303
+PRESIDENTE BERNARDES,Urbano,Urbano,Urbano,3541208
+SANDOVALINA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3545506
+QUATA,Urbano,Urbano,Urbano,3541703
+NARANDIBA,Urbano,Urbano,Urbano,3532207
+ALFREDO MARCONDES,Urbano,Urbano,Urbano,3500808
+MARABA PAULISTA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3528700
+IPUA,Urbano,Urbano,Urbano,3521309
+ESTIVA GERBI,Urbano,Urbano,Urbano,3557303
+ESPIRITO SANTO DO TURVO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3515194
+CHAVANTES,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3557204
+MANDURI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3528601
+TAPIRATIBA,Urbano,Urbano,Urbano,3553609
+AGUAS DA PRATA,Urbano,Urbano,Urbano,3500402
+LUTECIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3527900
+ARANDU,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3503109
+BORACEIA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3507308
+PONTES GESTAL,RuralAdjacente,RuralAdjacente,RuralAdjacente,3540309
+SANTO ANTONIO DO JARDIM,RuralAdjacente,RuralAdjacente,RuralAdjacente,3548104
+ORINDIUVA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3534203
+RINCAO,Urbano,Urbano,Urbano,3543709
+ITAPURA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3523008
+SEVERINIA,Urbano,Urbano,Urbano,3551900
+MENDONCA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3529500
+SANTO ANTONIO DO ARACANGUA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3548054
+TORRE DE PEDRA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3554656
+VITORIA BRASIL,RuralAdjacente,RuralAdjacente,RuralAdjacente,3556958
+MESOPOLIS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3529658
+NAZARE PAULISTA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3532405
+SANTA SALETE,RuralAdjacente,RuralAdjacente,RuralAdjacente,3547650
+MERIDIANO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3529609
+SAO JOAO DAS DUAS PONTES,RuralAdjacente,RuralAdjacente,RuralAdjacente,3549201
+GLICERIO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3517109
+DOBRADA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3514007
+TAIUVA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3553203
+NATIVIDADE DA SERRA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3532306
+CANAS,Urbano,Urbano,Urbano,3509957
+ALTO ALEGRE,RuralAdjacente,RuralAdjacente,RuralAdjacente,3501103
+ALTAIR,RuralAdjacente,RuralAdjacente,RuralAdjacente,3500907
+PIACATU,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3537701
+DOURADO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3514304
+RIBEIRAO BONITO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3542909
+QUADRA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3541653
+CAMPINA DO MONTE ALEGRE,RuralAdjacente,RuralAdjacente,RuralAdjacente,3509452
+ONDA VERDE,RuralAdjacente,RuralAdjacente,RuralAdjacente,3534005
+SABINO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3544608
+SAO LOURENCO DA SERRA,Urbano,Urbano,Urbano,3549953
+PONGAI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3540101
+FERNANDO PRESTES,RuralAdjacente,RuralAdjacente,RuralAdjacente,3515608
+VISTA ALEGRE DO ALTO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3556909
+SANTA LUCIA,Urbano,Urbano,Urbano,3546900
+LUIZIANIA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3527702
+BURITIZAL,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3508207
+CAMPOS NOVOS PAULISTA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3509809
+ITOBI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3523800
+LUPERCIO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3527801
+POPULINA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3540408
+AGUAS DE SAO PEDRO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3500600
+ROSEIRA,Urbano,Urbano,Urbano,3544301
+SAO JOSE DO BARREIRO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3549607
+MINEIROS DO TIETE,Urbano,Urbano,Urbano,3529807
+ZACARIAS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3557154
+SANTA ADELIA,Urbano,Urbano,Urbano,3545605
+MAGDA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3528304
+BALSAMO,Urbano,Urbano,Urbano,3504800
+PIRANGI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3539004
+NOVAIS,Urbano,Urbano,Urbano,3533254
+PARISI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3536257
+CANDIDO RODRIGUES,RuralAdjacente,RuralAdjacente,RuralAdjacente,3510104
+CAIABU,Urbano,Urbano,Urbano,3508900
+POLONI,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3539905
+SEBASTIANOPOLIS DO SUL,RuralAdjacente,RuralAdjacente,RuralAdjacente,3551306
+PLANALTO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3539608
+RUBIACEA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3544400
+CORUMBATAI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3512704
+CASSIA DOS COQUEIROS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3510906
+BARBOSA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3505104
+URUPES,Urbano,Urbano,Urbano,3556008
+ADOLFO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3500204
+LUIS ANTONIO,Urbano,Urbano,Urbano,3527603
+IARAS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3519253
+PRATANIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3541059
+ARCO-IRIS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3503356
+ARAPEI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3503158
+GABRIEL MONTEIRO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3516507
+OSCAR BRESSANE,RuralAdjacente,RuralAdjacente,RuralAdjacente,3534500
+NOVA INDEPENDENCIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3533205
+SUZANAPOLIS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3552551
+URU,RuralAdjacente,RuralAdjacente,RuralAdjacente,3555901
+INUBIA PAULISTA,Urbano,Urbano,Urbano,3520806
+RIBEIRAO DO SUL,RuralAdjacente,RuralAdjacente,RuralAdjacente,3543204
+NUPORANGA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3533601
+SANTA CRUZ DA ESPERANCA,Urbano,Urbano,Urbano,3546256
+SAO JOSE DA BELA VISTA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3549508
+MONTEIRO LOBATO,Urbano,Urbano,Urbano,3531704
+NANTES,RuralAdjacente,RuralAdjacente,RuralAdjacente,3532157
+NIPOA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3532702
+GUATAPARA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3518859
+JERIQUARA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3525409
+SALES,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3544806
+MARAPOAMA,Urbano,Urbano,Urbano,3528858
+RIBEIRAO DOS INDIOS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3543238
+INDIANA,Urbano,Urbano,Urbano,3520608
+GAVIAO PEIXOTO,Urbano,Urbano,Urbano,3516853
+CLEMENTINA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3511904
+SAO JOAO DE IRACEMA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3549250
+DIRCE REIS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3513850
+ANHUMAS,Urbano,Urbano,Urbano,3502408
+BOREBI,RuralAdjacente,RuralAdjacente,RuralAdjacente,3507456
+ICEM,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3519808
+MARIAPOLIS,Urbano,Urbano,Urbano,3528908
+BILAC,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3506409
+FERNAO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3515657
+ELISIARIO,Urbano,Urbano,Urbano,3514924
+TAIACU,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3553104
+EUCLIDES DA CUNHA PAULISTA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3515350
+REDENCAO DA SERRA,Urbano,Urbano,Urbano,3542305
+ASPASIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3503950
+EMBAUBA,Urbano,Urbano,Urbano,3514957
+ITAPIRAPUA PAULISTA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3522653
+CRUZALIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3513306
+ESTRELA DO NORTE,Urbano,Urbano,Urbano,3515301
+JAMBEIRO,Urbano,Urbano,Urbano,3524907
+MURUTINGA DO SUL,RuralAdjacente,RuralAdjacente,RuralAdjacente,3532108
+ALVARES FLORENCE,RuralAdjacente,RuralAdjacente,RuralAdjacente,3501202
+GASTAO VIDIGAL,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3516804
+ANALANDIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3502002
+BOM SUCESSO DE ITARARE,RuralAdjacente,RuralAdjacente,RuralAdjacente,3507159
+SAO JOSE DO RIO*,Urbano,Urbano,Urbano,
+MONCOES,RuralAdjacente,RuralAdjacente,RuralAdjacente,3531001
+PATROCINIO PAULISTA,Urbano,Urbano,Urbano,3536307
+SANTA CRUZ DA CONCEICAO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3546207
+ITAOCA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3522158
+FLOREAL,RuralAdjacente,RuralAdjacente,RuralAdjacente,3515905
+CABRALIA PAULISTA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3508306
+APARECIDA D OESTE,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3502606
+NOVA CANAA PAULISTA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3532843
+PARAISO,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3535705
+EMILIANOPOLIS,Urbano,Urbano,Urbano,3515129
+SANTO ANTONIO DO PINHAL,RuralAdjacente,RuralAdjacente,RuralAdjacente,3548203
+TRABIJU,RuralAdjacente,RuralAdjacente,RuralAdjacente,3554755
+FLORA RICA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3515806
+GUARANI D'OESTE,RuralAdjacente,RuralAdjacente,RuralAdjacente,3518008
+JOAO RAMALHO,RuralAdjacente,RuralAdjacente,RuralAdjacente,3525607
+JUMIRIM,RuralAdjacente,RuralAdjacente,RuralAdjacente,3525854
+MOTUCA,IntermediarioAdjacente,IntermediarioAdjacente,IntermediarioAdjacente,3532058
+PAULISTANIA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3536570
+NOVA GUATAPORANGA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3533106
+DOLCINOPOLIS,RuralAdjacente,RuralAdjacente,RuralAdjacente,3514205
+PEDRINHAS PAULISTA,RuralAdjacente,RuralAdjacente,RuralAdjacente,3537156
+LOURDES,RuralAdjacente,RuralAdjacente,RuralAdjacente,3527256
+RIBEIRAO CORRENTE,Urbano,Urbano,Urbano,3543105
