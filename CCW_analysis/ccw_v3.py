@@ -58,12 +58,13 @@
    python3 ccw_v3.py --bootstrap 500              # + CIs (cycles imputations)
    python3 ccw_v3.py --bootstrap 200 --rubin      # + CIs (full M x B, Rubin)
    python3 ccw_v3.py --subgroups                  # subgroup contrasts
-   python3 ccw_v3.py --ltfu-date closure          # timing-convention sensitivity
+   python3 ccw_v3.py --ltfu-date closure          # Reviewer 3 timing sensitivity
    python3 ccw_v3.py --cause tb_simonly           # SIM-only attribution
 =============================================================================
 """
 
 import argparse
+import hashlib
 import json
 import time
 from pathlib import Path
@@ -82,7 +83,8 @@ ROOT = Path("/Users/jasonandrews/Library/CloudStorage/GoogleDrive-jasonandr@gmai
 MI_DIR = ROOT / "ITT_Analysis/data/mi"
 RAW_CSV = ROOT / "Data/Final_table_cleaned.csv"
 OUTDIR = ROOT / "CCW_analysis/results_v3"
-CACHE = OUTDIR / "cause_lookup_fixedattr.csv"
+CACHE = OUTDIR / "cause_lookup_fixedattr.csv"   # ADR-0003
+
 MONTH_DAYS = 30.4
 HORIZON_M = 24
 ADMIN_CENSOR = pd.Timestamp("2024-12-31")
@@ -92,9 +94,14 @@ REPORT_AT = [6, 12, 24]
 WEIGHT_TRUNC = (0.01, 0.99)
 DISJOINT = False   # set by --disjoint
 
+# `geo4` is a covariate in BOTH designs as of 2026-08-18. It was added to the
+# rolling landmark first; keeping CCW's set identical matters because CCW is the
+# secondary analysis supporting the response to Reviewer 3, and a reviewer
+# comparing the two would otherwise find them adjusted differently.
 COVS = ["age_group", "sex", "race_clean", "edu_clean", "hiv_aids", "diabetes",
         "alcohol", "drug_use", "incarcerated", "homelessness",
-        "hosp_admission", "clinical_clean", "dot_status"]
+        "hosp_admission", "clinical_clean", "dot_status", "geo4"]
+GEO_REF = "Urbano"      # reference level; custody folds in here
 
 SUBGROUPS = ["age_group", "sex", "hiv_aids", "homelessness",
              "resistance_clean", "period"]
@@ -146,7 +153,7 @@ def build_cause_lookup(force=False, verbose=True):
     novo = novo.sort_values("end_date")
     first = novo.drop_duplicates("sinan_clean", keep="first")[["sinan_clean", "case_outcome"]]
 
-    # --- FIX (2026-08-16): Obito outcome from ANY episode -------------------
+    # --- ADR-0003 FIX: Obito outcome from ANY episode -------------------
     # An LTFU patient's index episode closes as `Abandono`, so index-only
     # lookup cannot see their death. 1,058 of 1,668 LTFU deaths (63.4%) are
     # recorded on a retreatment episode (`Retr Aband`, `Recidiva`). Verified
@@ -161,7 +168,7 @@ def build_cause_lookup(force=False, verbose=True):
     first["case_outcome"] = first["_obito"].combine_first(first["case_outcome"])
     first = first.drop(columns=["_obito"])
     if verbose:
-        print(f"  [cause-fix] Obito recovered from any episode: {len(_ob):,}")
+        print(f"  [ADR-0003] Obito recovered from any episode: {len(_ob):,}")
 
     dr = raw[raw["dod"].notna() & raw["cause_of_death_code"].notna()].copy()
     dr["cause_of_death_code"] = dr["cause_of_death_code"].astype(str).str.strip().str.upper()
@@ -202,9 +209,66 @@ def build_cause_lookup(force=False, verbose=True):
 # ---------------------------------------------------------------------------
 # TIMELINE (one imputation)
 # ---------------------------------------------------------------------------
+_GEO_CACHE = {}
+
+
+def build_geo_lookup(verbose=True):
+    """sinan_clean -> geo4. Mirror of build_geo_lookup() in _rolling.R.
+
+    Keyed on the RAW TBweb `tx_city` string via the crosswalk from
+    47_build_ibge_typology.py, so no normalisation happens here. Custody is
+    already folded into the reference level by that script, because
+    geo_class == "Prison" is 100% collinear with the `incarcerated` covariate.
+
+    City is taken from the INDEX episode. That does not hit invariant 8:
+    `tx_city` is present on every episode, so there is no differential
+    missingness. A modal/latest rule WOULD hit it (9.86% of LTFU patients have
+    >1 city versus 1.35% of non-LTFU).
+    """
+    if "df" in _GEO_CACHE:
+        return _GEO_CACHE["df"]
+    xw_path = ROOT / "ITT_Analysis" / "external" / "municipality_typology_sp.csv"
+    if not xw_path.exists():
+        raise SystemExit("[geo] missing crosswalk; run "
+                         "ITT_Analysis/scripts/47_build_ibge_typology.py")
+    xw = pd.read_csv(xw_path)[["municipality", "geo4"]].rename(
+        columns={"municipality": "tx_city"})
+
+    raw = pd.read_csv(RAW_CSV, low_memory=False,
+                      usecols=["sinan_clean", "case_type", "case_outcome",
+                               "end_date", "tx_city"])
+    raw["end_date"] = pd.to_datetime(raw.end_date, format="%B %d, %Y", errors="coerce")
+    TRANSFER = ["Transf Outro Municipio", "Transf Outro Estado/Pais"]
+    novo = raw[raw.case_type.astype(str).str.strip().str.lower().eq("novo")]
+    novo = novo[novo.case_outcome.notna()
+                & novo.case_outcome.astype(str).str.strip().ne("")
+                & novo.case_outcome.ne("Mud Diag")
+                & ~novo.case_outcome.isin(TRANSFER)]
+    first = novo.sort_values("end_date").drop_duplicates("sinan_clean")[
+        ["sinan_clean", "tx_city"]]
+    anyc = raw.sort_values("end_date").drop_duplicates("sinan_clean")[
+        ["sinan_clean", "tx_city"]].rename(columns={"tx_city": "tx_city_any"})
+    first = first.merge(anyc, on="sinan_clean", how="outer")
+    first["tx_city"] = first.tx_city.fillna(first.tx_city_any)
+
+    out = first[["sinan_clean", "tx_city"]].merge(xw, on="tx_city", how="left")
+    cov = out.geo4.notna().mean()
+    if cov < 0.999:
+        raise SystemExit(f"[geo] crosswalk covers only {cov:.2%} of patients; "
+                         f"re-run 47_build_ibge_typology.py")
+    if verbose:
+        print(f"  [geo] {out.geo4.notna().sum():,} patients mapped ({cov:.2%})")
+    out = out[["sinan_clean", "geo4"]]
+    _GEO_CACHE["df"] = out
+    return out
+
+
 def load_timeline(imp_path, cause_lookup, ltfu_date_mode="shift30", verbose=False):
     df = pd.read_csv(imp_path, low_memory=False)
     df = df.merge(cause_lookup, on="sinan_clean", how="left")
+    # always merged, so no call site can fit without a covariate that is in COVS
+    df = df.merge(build_geo_lookup(verbose=False), on="sinan_clean", how="left")
+    df["geo4"] = df.geo4.fillna(GEO_REF)
     for c in ["best_start", "end_date", "death_date"]:
         df[c] = pd.to_datetime(df[c], errors="coerce")
 
@@ -586,6 +650,42 @@ def bootstrap(timelines, xpats, jobs, B, seed, rubin=False):
 # ---------------------------------------------------------------------------
 # MAIN
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Provenance
+# ---------------------------------------------------------------------------
+# mtime is meaningless in this tree -- Google Drive sync rewrites it on files
+# nobody touched (CLAUDE.md invariant 3). So the ONLY reliable staleness signal
+# is content. On 2026-08-18 `rolling_landmark_cause.csv` was found reporting a
+# pre-primary-abandonment cohort after sitting stale for two days, because
+# nothing recorded what had produced it. These hashes make the same failure
+# detectable here: `tools/check_ccw_provenance.py` re-hashes the inputs and
+# fails if they no longer match what the output claims.
+def _sha16(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()[:16]
+
+
+def build_provenance(imp_files):
+    me = Path(__file__).resolve()
+    return {
+        "generated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "script": me.name,
+        "script_sha16": _sha16(me),
+        "raw_csv": str(RAW_CSV.relative_to(ROOT)),
+        "raw_csv_sha16": _sha16(RAW_CSV) if RAW_CSV.exists() else None,
+        "geo_crosswalk": "ITT_Analysis/external/municipality_typology_sp.csv",
+        "geo_crosswalk_sha16": _sha16(
+            ROOT / "ITT_Analysis" / "external" / "municipality_typology_sp.csv"),
+        "cause_lookup": str(CACHE.relative_to(ROOT)),
+        "cause_lookup_sha16": _sha16(CACHE) if CACHE.exists() else None,
+        "imputations": {Path(f).name: _sha16(f) for f in imp_files},
+        "adrs": "ADR-0003 cause-from-any-episode; ADR-0005 no conditional CCW",
+    }
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--bootstrap", type=int, default=0)
@@ -655,7 +755,8 @@ def main():
                   f"{r['risk24_dis']:>7.2f}% {int(r['events_dis']):>8,} "
                   f"{'y' if r['estimable'] else 'NO':>4}")
 
-    out = {"config": {"ltfu_date": args.ltfu_date, "horizon_m": HORIZON_M,
+    out = {"provenance": build_provenance(imp_files),
+           "config": {"ltfu_date": args.ltfu_date, "horizon_m": HORIZON_M,
                       "primary_T": PRIMARY_T, "covariates": COVS,
                       "imputations": len(imp_files), "causes": causes,
                       "weight_truncation": WEIGHT_TRUNC,
@@ -701,7 +802,7 @@ def main():
             out["subgroups"] = sres.to_dict(orient="records")
             print("\n  Reminder: relative and absolute measures rank subgroups")
             print("  differently. Read RD, not RR, for where the preventable")
-            print("  deaths are: relative and absolute measures rank them differently.")
+            print("  deaths are -- this is the point Reviewer 1 asks you to make.")
 
     # ---------------- bootstrap ----------------
     if args.bootstrap:
