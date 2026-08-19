@@ -43,3 +43,9 @@ tools/*
 # 48_make_literature_docx.py stays in Google Drive: it hardcodes the manuscript's
 # effect estimates and the prior-literature comparison, i.e. unpublished results.
 ITT_Analysis/scripts/48_make_literature_docx.py
+
+# Agent tooling: per-user permission grants, and agent worktrees (which are full
+# embedded repo copies). Note gitignore has no trailing comments — a pattern with
+# a comment appended to the same line matches nothing.
+.claude/settings.local.json
+.claude/worktrees/
