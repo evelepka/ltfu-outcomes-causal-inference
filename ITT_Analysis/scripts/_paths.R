@@ -6,23 +6,46 @@
 # Resolution order:
 #   1. TB_ABANDONMENT_ROOT environment variable (set for non-standard setups)
 #   2. Known Google Drive mounts for current collaborators
-#   3. Script-relative fallback (../../ from ITT_Analysis/scripts/)
+#
+# A candidate only counts if it actually LOOKS like the project root, i.e. it
+# contains ITT_Analysis/data. A bare dir.exists() check was not enough: on a
+# machine where none of the candidates were mounted, the old script-relative
+# fallback resolved PROJECT_ROOT to the user's HOME directory and every
+# downstream path silently became ~/ITT_Analysis/... — reads failed with
+# confusing errors and writes would have landed in the home directory.
+# There is deliberately NO fallback now. Not finding the root is a hard error.
+
+.is_project_root <- function(p) {
+  nzchar(p) && dir.exists(file.path(p, "ITT_Analysis", "data"))
+}
 
 find_project_root <- function() {
   env_root <- Sys.getenv("TB_ABANDONMENT_ROOT", unset = "")
-  if (nzchar(env_root) && dir.exists(env_root)) {
+  if (nzchar(env_root)) {
+    if (!.is_project_root(env_root)) {
+      stop(sprintf(
+        "TB_ABANDONMENT_ROOT is set to '%s' but that is not a project root\n(no ITT_Analysis/data inside it).",
+        env_root
+      ), call. = FALSE)
+    }
     return(normalizePath(env_root))
   }
+
   home <- path.expand("~")
   candidates <- c(
+    file.path(home, "Library/CloudStorage/GoogleDrive-evelynlepka@gmail.com/My Drive/TB SP 2026/LTFU Paper"),
     file.path(home, "Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/My Drive/Abandonment Paper"),
     file.path(home, "Library/CloudStorage/GoogleDrive-evelynlepka@gmail.com/My Drive/Abandonment Outcomes/Abandonment Paper")
   )
-  for (c in candidates) {
-    if (dir.exists(c)) return(c)
+  for (cand in candidates) {
+    if (.is_project_root(cand)) return(cand)
   }
-  # Last resort: walk up from the working directory
-  normalizePath(file.path(getwd(), "..", ".."), mustWork = FALSE)
+
+  stop(paste0(
+    "Could not locate the project root (the Google Drive folder holding Data/ and ITT_Analysis/).\n",
+    "Tried:\n  - ", paste(candidates, collapse = "\n  - "), "\n",
+    "Mount Google Drive, or set TB_ABANDONMENT_ROOT to the folder containing ITT_Analysis/data."
+  ), call. = FALSE)
 }
 
 PROJECT_ROOT <- find_project_root()
