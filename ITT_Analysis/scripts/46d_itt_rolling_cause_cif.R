@@ -34,6 +34,27 @@
 #   S(t | X)    = exp( - sum_k H_k(t | X) )        all three hazards
 #   CIF_k(t| X) = sum over grid of S(u- | X) * dH_k(u | X)
 #
+# PERIOD-FLEXIBLE EXPOSURE (owner decision 2026-08-20, "option 1")
+# ---------------------------------------------------------------------------
+# The first version of this script gave the exposure a SINGLE coefficient per
+# cause over the whole horizon, i.e. it assumed proportional hazards -- while
+# 45b, which produces the all-cause number in Figure 4, does not. The two
+# therefore disagreed on the same estimand: for month 1 at five years the
+# all-cause risk difference from 45b was materially larger than the sum of the
+# causes here. A reader adding up Figure 5 and comparing it with Figure 4 panel
+# A would find one of them wrong. (Both values are in docs/number-registry.csv,
+# which is untracked: this repo is public and the estimates are under review.)
+#
+# So the exposure now gets its own coefficient in each of five disjoint
+# follow-up periods, per cause, exactly as in 45b:
+#
+#   H_k(t | X, exposed)   = exp(gX) * sum_j exp(b_kj) * [H0_k(min(t,U_j)) - H0_k(L_j)]
+#   H_k(t | X, unexposed) = exp(gX) * H0_k(t)
+#
+# The cause-specific risks are then free of PH in the same way the all-cause one
+# is, the two scripts estimate the same thing, and the parts still add to the
+# whole because S(t) is assembled from the same three hazards.
+#
 # By construction sum_k CIF_k(t) = 1 - S(t) = the all-cause cumulative
 # incidence, so the cause-specific risk differences ADD UP to the all-cause risk
 # difference. That coherence is the whole point and is checked at the end.
@@ -51,7 +72,7 @@
 #
 # Output: ITT_Analysis/results/rolling_cause_cif.csv
 # ==============================================================================
-suppressPackageStartupMessages({ library(splines); library(dplyr) })
+suppressPackageStartupMessages({ library(splines); library(survival); library(dplyr) })
 
 .here <- function() {
   a <- commandArgs(trailingOnly = FALSE); f <- grep("^--file=", a, value = TRUE)
@@ -67,6 +88,38 @@ NGRID   <- 400                                          # time grid for the inte
 CAUSES  <- c("tb", "nontb", "unclass")
 BYMONTH <- nzchar(Sys.getenv("BYMONTH", unset = "1"))   # also do months 1-6
 
+# Follow-up periods for the exposure effect. Identical to 45b's CUTS -- if these
+# two ever diverge the scripts stop estimating the same thing again.
+CUTS  <- c(0.5, 1, 2, 3)         # -> periods (0,.5] (.5,1] (1,2] (2,3] (3,5]
+UPPER <- c(CUTS, HZ); LOWER <- c(0, CUTS); NP <- length(UPPER)
+
+# ---------------------------------------------------------------------------
+# Merge any covariate level carrying fewer than MIN_EVENTS_PER_LEVEL events into
+# the modal level. Same helper as 50_itt_rolling_subgroup_windows.R.
+#
+# Needed here and not in 45b because the causes are fitted separately: TB deaths
+# are roughly a quarter of all deaths, and once those are split across five
+# follow-up periods a rare level (race "Other", the sparse geo4 categories) can
+# end up with zero events in a period. coxph then separates and dies with
+# "exp overflow due to covariates" -- which is what happened on the first run.
+# ---------------------------------------------------------------------------
+MIN_EVENTS_PER_LEVEL <- 5
+
+collapse_sparse_levels <- function(sub, vars) {
+  for (v in vars) {
+    if (!is.factor(sub[[v]]) && !is.character(sub[[v]])) next
+    f  <- as.character(sub[[v]])
+    ev <- tapply(sub$event_out, f, sum); ev <- ev[!is.na(ev)]
+    if (length(ev) < 2 || all(ev >= MIN_EVENTS_PER_LEVEL)) next
+    keep <- names(ev)[ev >= MIN_EVENTS_PER_LEVEL]
+    ref  <- names(ev)[which.max(ev)]
+    if (!length(keep)) next
+    sub[[v]] <- relevel(factor(ifelse(f %in% keep, f, ref),
+                               levels = union(ref, keep)), ref = ref)
+  }
+  sub
+}
+
 # ---------------------------------------------------------------------------
 # One cause-specific Cox fit. Competing-cause deaths are censored here, which is
 # correct: the CIF assembly below puts them back through S(t).
@@ -77,14 +130,58 @@ fit_cause <- function(tr, which_cause, covars, within_month) {
   d$event_out <- as.integer(d$time_raw <= HZ & d[[paste0("ev_", which_cause)]])
   d <- d[d$time_out > 0, , drop = FALSE]
   if (sum(d$event_out) < 15) return(NULL)
-  cv   <- drop_constant(d, covars)
+  d <- collapse_sparse_levels(d, covars)
+  # one exposure coefficient per follow-up period, as in 45b's fit_flex()
+  sp <- survSplit(Surv(time_out, event_out) ~ ., data = d, cut = CUTS,
+                  episode = "per")
+  for (k in seq_len(NP)) sp[[paste0("ex_p", k)]] <-
+    as.numeric(sp$expose == 1 & sp$per == k)
+  exv <- paste0("ex_p", seq_len(NP))
+  exv <- exv[vapply(exv, function(v) sum(sp[[v]]) > 0, logical(1))]
+  cv   <- drop_constant(sp, covars)
   tday <- if (within_month) "trial_day" else "ns(trial_day, df = 3)"
-  f <- as.formula(paste("Surv(time_out, event_out) ~",
-                        paste(c("expose", cv, tday), collapse = " + ")))
-  fit <- tryCatch(coxph(f, data = d, cluster = pid, ties = "efron",
+  # Two-stage fit. Starting from zero, the TB model diverges: ex_p3 swings from
+  # +5.2 to -13.9 between Newton steps and coxph dies with "exp overflow due to
+  # covariates". TB is the thinnest of the three causes, and split across five
+  # periods and two arms its smallest cell holds only a few dozen events, so the
+  # information matrix is poorly conditioned at the origin -- not separated, just
+  # badly scaled for a Newton step. The model WITHOUT the time term converges
+  # cleanly, so its coefficients are the starting point for the full one. This
+  # changes where the optimiser starts, not what it maximises.
+  #
+  # Only TB actually needs the warm start, and the extra fit is not cheap on the
+  # full stack, so try the direct fit first and fall back. Same likelihood either
+  # way: a converged fit is the same MLE wherever it started from.
+  #
+  # A fit that merely stops iterating is NOT usable. Bootstrap replicate 1 of the
+  # first trial run returned a TB risk difference far outside the plausible range while
+  # printing "ran out of iterations", roughly double the point estimate; left in,
+# replicates like that widen the
+  # interval with numerical noise rather than sampling variability. So
+  # non-convergence is treated exactly like an error: warm-start it, and if that
+  # still will not converge, drop the replicate and say so in the count.
+  ok <- function(o, imax) !is.null(o) && isTRUE(o$iter < imax)
+
+  f <- as.formula(paste("Surv(tstart, time_out, event_out) ~",
+                        paste(c(exv, cv, tday), collapse = " + ")))
+  fit <- tryCatch(coxph(f, data = sp, cluster = pid, ties = "efron",
                         x = FALSE, model = TRUE), error = function(e) NULL)
+  if (!ok(fit, 20)) {
+    f0 <- as.formula(paste("Surv(tstart, time_out, event_out) ~",
+                           paste(c(exv, cv), collapse = " + ")))
+    fit0 <- tryCatch(coxph(f0, data = sp, ties = "efron"), error = function(e) NULL)
+    if (is.null(fit0)) return(NULL)
+    nm  <- colnames(model.matrix(f, data = sp))[-1]
+    ini <- setNames(rep(0, length(nm)), nm)
+    common <- intersect(nm, names(coef(fit0)))
+    ini[common] <- coef(fit0)[common]
+    fit <- tryCatch(coxph(f, data = sp, cluster = pid, ties = "efron", init = ini,
+                          control = coxph.control(iter.max = 100),
+                          x = FALSE, model = TRUE), error = function(e) NULL)
+    if (!ok(fit, 100)) return(NULL)
+  }
   if (is.null(fit)) return(NULL)
-  list(fit = fit, d = d, n_ev = sum(d$event_out))
+  list(fit = fit, sp = sp, exv = exv, n_ev = sum(d$event_out))
 }
 
 # step function H0 evaluated on a grid
@@ -103,21 +200,53 @@ cif_standardized <- function(tr, covars, within_month) {
   if (any(vapply(fits, is.null, logical(1)))) return(NULL)
 
   grid <- seq(0, HZ, length.out = NGRID + 1)
-  H0   <- lapply(fits, function(o) h0_on_grid(o$fit, grid))
 
-  # one row per exposed patient, from any of the fits (same rows)
-  ex <- fits[[1]]$d[fits[[1]]$d$expose == 1, , drop = FALSE]
-  if (!nrow(ex)) return(NULL)
+  # Per cause, two baseline curves on the grid: H0_k(t) for the unexposed arm,
+  # and the period-weighted sum_j exp(b_kj) * [H0_k(min(t,U_j)) - H0_k(L_j)] for
+  # the exposed one. Everything downstream is common to both arms.
+  H0un <- list(); H0ex <- list()
+  for (k in CAUSES) {
+    bh <- basehaz(fits[[k]]$fit, centered = FALSE)
+    H0f <- function(t) { i <- findInterval(t, bh$time)
+                         ifelse(i == 0, 0, bh$hazard[pmax(i, 1)]) }
+    b  <- coef(fits[[k]]$fit)
+    bk <- vapply(seq_len(NP), function(j) {
+      nm <- paste0("ex_p", j); if (nm %in% names(b)) unname(b[nm]) else 0 },
+      numeric(1))
+    H0un[[k]] <- H0f(grid)
+    H0ex[[k]] <- vapply(grid, function(t)
+      sum(exp(bk) * pmax(0, H0f(pmin(t, UPPER)) - H0f(LOWER))), numeric(1))
+  }
+
+  # one row per exposed patient-clone; period 1 rows only, so no one is counted
+  # five times. Row sets are identical across causes: the causes differ only in
+  # which deaths count as events, never in who is at risk or for how long.
+  #
+  # Each cause is read off ITS OWN sp, not a shared one. collapse_sparse_levels()
+  # runs per cause, so a level surviving in one cause may have been merged away
+  # in another; feeding TB's factor coding to the non-TB fit throws "factor geo4
+  # has new levels". The row FILTER is identical across causes -- who is at risk
+  # and for how long does not depend on which death counts -- so the rows still
+  # line up one-to-one and S(t) is assembled over the same people.
+  n_ex <- sum(fits[[1]]$sp$expose == 1 & fits[[1]]$sp$per == 1)
+  if (!n_ex) return(NULL)
+
+  # linear predictor WITHOUT the exposure terms: the exposure now lives in the
+  # baseline assembly above, not in lp.
+  e_lp <- list()
+  for (k in CAUSES) {
+    spk <- fits[[k]]$sp
+    d0  <- spk[spk$expose == 1 & spk$per == 1, , drop = FALSE]
+    if (nrow(d0) != n_ex) return(NULL)          # row sets must correspond
+    for (v in fits[[k]]$exv) d0[[v]] <- 0
+    e_lp[[k]] <- exp(predict(fits[[k]]$fit, newdata = d0, type = "lp",
+                             reference = "zero"))
+  }
 
   out <- list()
   for (arm in c(1, 0)) {
-    dd <- ex; dd$expose <- arm
-    lp <- lapply(fits, function(o)
-      predict(o$fit, newdata = dd, type = "lp", reference = "zero"))
-    e_lp <- lapply(lp, exp)                       # n_exposed vector per cause
-
-    # cumulative hazard for each cause on the grid: outer(n, grid)
-    Hk <- lapply(CAUSES, function(k) outer(e_lp[[k]], H0[[k]]))
+    H0a <- if (arm == 1) H0ex else H0un
+    Hk  <- lapply(CAUSES, function(k) outer(e_lp[[k]], H0a[[k]]))
     names(Hk) <- CAUSES
     Htot <- Reduce(`+`, Hk)
     S    <- exp(-Htot)                            # survival, n x (NGRID+1)
@@ -145,7 +274,7 @@ cif_standardized <- function(tr, covars, within_month) {
     tidyr::pivot_wider(names_from = arm, values_from = risk,
                        names_prefix = "risk") |>
     mutate(rd = risk1 - risk0, rr = risk1 / risk0,
-           n_exposed = nrow(ex),
+           n_exposed = n_ex,
            n_events = sum(vapply(fits, function(o) o$n_ev, numeric(1))))
   w
 }
@@ -233,5 +362,100 @@ if (BYMONTH) {
 out <- file.path(ITT_RESULTS_DIR, "rolling_cause_cif.csv")
 write.csv(res, out, row.names = FALSE)
 cat(sprintf("\n[46d] wrote %s\n", out))
-cat("  NOTE: point estimates only. Confidence intervals need the same cluster\n")
-cat("  bootstrap as script 45b; do not put these in the manuscript without them.\n")
+
+# ---------------------------------------------------------------------------
+# Cluster bootstrap. Same construction as 45b: patients are the sampling unit,
+# the stack is rebuilt inside each replicate, the imputation is drawn at random
+# and the seed differs per replicate.
+#
+# Draws are appended to disk after EVERY replicate, not at the end. One replicate
+# here costs minutes rather than 45b's seconds, so an overnight run that is cut
+# short still has to yield usable intervals -- and 45b already lost 300
+# replicates once by holding everything in memory until a print statement failed.
+# Re-running picks nothing up automatically, but the partial draws file can be
+# read straight into the summary below.
+# ---------------------------------------------------------------------------
+B <- as.integer(Sys.getenv("B", unset = "0"))
+if (B > 0) {
+  draws_path <- file.path(ITT_RESULTS_DIR, "rolling_cause_cif_draws.csv")
+  cat(sprintf("\n=== cluster bootstrap, B=%d ===\n", B))
+  cat(sprintf("  draws appended to %s after every replicate\n", basename(draws_path)))
+  BOOT_BYMONTH <- nzchar(Sys.getenv("BOOT_BYMONTH", unset = ""))
+  cat(sprintf("  scope: overall%s\n",
+              if (BOOT_BYMONTH) " + months 1-6" else " only (BOOT_BYMONTH=1 to add months)"))
+  set.seed(4646)
+  rm(stacks); invisible(gc())          # the stacks are rebuilt per replicate
+  imp_pick <- sample.int(length(prepped), B, replace = TRUE)
+  if (file.exists(draws_path)) file.remove(draws_path)
+  wrote_header <- FALSE
+  t0 <- Sys.time(); n_ok <- 0L
+
+  add_ev <- function(s) {
+    died <- s$event_d_num == 1
+    s$ev_tb      <- died &  s$tb_hybrid
+    s$ev_nontb   <- died & !s$tb_hybrid &  s$nontb_hybrid
+    s$ev_unclass <- died & !s$tb_hybrid & !s$nontb_hybrid
+    s
+  }
+
+  for (b in seq_len(B)) {
+    d  <- prepped[[imp_pick[b]]]
+    dd <- d[sample.int(nrow(d), nrow(d), replace = TRUE), , drop = FALSE]
+    dd$pid <- seq_len(nrow(dd))
+    sb <- add_ev(build_rolling(dd, comparator = "in_care",
+                               carry = CARRY, seed = 7000L + 13L * b))
+    rows <- list()
+    r <- tryCatch(cif_standardized(sb, COVARS, FALSE), error = function(e) NULL)
+    if (!is.null(r)) { r$dmon <- NA_integer_; rows[[length(rows) + 1]] <- r }
+    if (BOOT_BYMONTH) {
+      sb$dmon <- pmin(ceiling(sb$trial_day / 30.4), 6)
+      for (m in 1:6) {
+        rm_ <- tryCatch(cif_standardized(sb[sb$dmon == m, , drop = FALSE],
+                                         COVARS, TRUE), error = function(e) NULL)
+        if (!is.null(rm_)) { rm_$dmon <- m; rows[[length(rows) + 1]] <- rm_ }
+      }
+    }
+    if (length(rows)) {
+      dr <- bind_rows(rows); dr$rep <- b
+      write.table(dr[, c("rep", "dmon", "cause", "time_y", "rd", "rr")],
+                  draws_path, sep = ",", row.names = FALSE,
+                  col.names = !wrote_header, append = wrote_header)
+      wrote_header <- TRUE; n_ok <- n_ok + 1L
+    }
+    if (b %% 5 == 0) {
+      el <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+      cat(sprintf("  rep %d/%d  ok=%d  %.0fs/rep  ETA %.1f h\n",
+                  b, B, n_ok, el / b, el / b * (B - b) / 3600))
+      invisible(gc())
+    }
+  }
+
+  if (n_ok >= 20) {
+    bd <- read.csv(draws_path)
+    ci <- bd |> group_by(dmon, cause, time_y) |>
+      summarise(rd_lo = quantile(rd, .025, na.rm = TRUE),
+                rd_hi = quantile(rd, .975, na.rm = TRUE),
+                rr_lo = quantile(rr, .025, na.rm = TRUE),
+                rr_hi = quantile(rr, .975, na.rm = TRUE),
+                n_reps = sum(!is.na(rd)), .groups = "drop")
+    res2 <- left_join(res, ci, by = c("dmon", "cause", "time_y"))
+    outb <- file.path(ITT_RESULTS_DIR, "rolling_cause_cif_boot.csv")
+    write.csv(res2, outb, row.names = FALSE)      # write BEFORE printing
+    cat(sprintf("\n[46d] wrote %s  (%d replicates completed of %d requested)\n",
+                outb, n_ok, B))
+    for (tt in REPORT) {
+      s <- res2[is.na(res2$dmon) & res2$time_y == tt, ]
+      cat(sprintf("\n  --- %g years, overall, with %d-replicate CIs ---\n", tt, n_ok))
+      for (i in seq_len(nrow(s)))
+        cat(sprintf("  %-8s RD %+6.3f (%+6.3f to %+6.3f)%s\n",
+                    s$cause[i], s$rd[i], s$rd_lo[i], s$rd_hi[i],
+                    if (isTRUE(s$rd_lo[i] < 0 && s$rd_hi[i] > 0)) "  *includes zero*" else ""))
+    }
+  } else {
+    cat(sprintf("\n[46d] only %d replicates completed -- too few for an interval.\n", n_ok))
+    cat(sprintf("  Raw draws are in %s.\n", draws_path))
+  }
+} else {
+  cat("  NOTE: point estimates only. Confidence intervals need the cluster\n")
+  cat("  bootstrap: B=150 Rscript 46d_itt_rolling_cause_cif.R\n")
+}
