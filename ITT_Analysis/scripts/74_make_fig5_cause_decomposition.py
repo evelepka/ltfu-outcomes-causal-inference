@@ -50,7 +50,7 @@ from _paths import ITT_RESULTS_DIR                        # noqa: E402
 RES = Path(ITT_RESULTS_DIR)
 
 # Okabe-Ito. No red/green pairing (PLOS request); grey reserved for "spans zero".
-COL = {"tb": "#D55E00", "nontb": "#0072B2", "unclass": "#E69F00", "all": "#000000"}
+COL = {"tb": "#D55E00", "nottb": "#0072B2", "all": "#000000"}
 # NOTE ON THE NULL CONVENTION -- deliberately different from Figure 4.
 # Figure 4 greys out an interval spanning the null, which is fine there because
 # every row is a separately labelled category. Here four series are interleaved
@@ -65,14 +65,13 @@ COL = {"tb": "#D55E00", "nontb": "#0072B2", "unclass": "#E69F00", "all": "#00000
 # requires a POSITIVE classification as something other than tuberculosis; the
 # third is the residue that cannot be classified at all.
 LAB = {"tb": "Attributed to tuberculosis",
-       "nontb": "Attributed to another cause",
-       "unclass": "No cause attributed",
+       "nottb": "Not attributed to tuberculosis",
        "all": "All causes"}
 # Panel B interleaves four series per month, so its legend has to stay narrow.
 # Panel A spells the categories out in full a few centimetres to the left, and
 # the colours are shared, so the legend can be terse without losing the reader.
-SHORT = {"all": "All causes", "tb": "Tuberculosis",
-         "nontb": "Another cause", "unclass": "Not attributed"}
+SHORT = {"all": "All causes", "tb": "Attributed to tuberculosis",
+         "nottb": "Not attributed to tuberculosis"}
 GREY = "#999999"
 ORDER = ["all", "tb", "nontb", "unclass"]
 
@@ -97,22 +96,65 @@ def spans_zero(r):
     return pd.notna(r.rd_lo) and pd.notna(r.rd_hi) and r.rd_lo < 0 < r.rd_hi
 
 
-HORIZONS = [2, 5]                       # top panel, bottom panel -- per the plan
-SERIES = ["tb", "nontb", "unclass"]     # no all-cause row: the plan does not ask for one
-OFFS = {"tb": -0.16, "nontb": 0.0, "unclass": 0.16}
-STY = {"tb": dict(ms=6.5, lw=1.8), "nontb": dict(ms=6.5, lw=1.8),
-       "unclass": dict(ms=4.5, lw=1.1)}
+HORIZONS = [5]
+# The plan asked for a 2-year panel above a 5-year one. Owner decision
+# 2026-08-21: five years only, matching the single horizon the manuscript
+# reports, and the 2-year bootstrap was stopped rather than finished.
+# TWO classes, owner decision 2026-08-21. The methodology names two, and a third
+# series implied a classification the paper never had. "Not attributed to
+# tuberculosis" is everything else -- positively attributed to another cause,
+# plus the deaths whose cause cannot be assigned to either. That is literally
+# true of them, and the two parts still sum to the all-cause excess.
+#
+# The residual is NOT small: the unassignable deaths are ~11-12% of the total
+# and are irreducible with these data. Using tuberculosis from any line of the
+# certificate instead of the underlying cause alone moves only 89 of them
+# (12.0% -> 11.4%), so folding them in is a presentation choice, not a
+# measurement improvement. The footnote must say what the second class contains.
+SERIES = ["tb", "nottb"]
+OFFS = {"tb": -0.10, "nottb": 0.10}
+STY = {"tb": dict(ms=6.5, lw=1.8), "nottb": dict(ms=6.5, lw=1.8)}
+
+
+def add_not_tb(d):
+    """not-TB = all-cause minus TB. Derived per bootstrap replicate where the
+    draws allow it, never by subtracting one interval from another."""
+    import numpy as np
+    draws = RES / "rolling_cause_cif_draws.csv"
+    bd = pd.read_csv(draws, on_bad_lines="skip") if draws.exists() else None
+    rows = []
+    for (dm, hz), g in d.groupby([d.dmon.fillna(-1), "time_y"]):
+        g = g.set_index("cause")
+        if not {"all", "tb"} <= set(g.index):
+            continue
+        r = g.loc["all"].copy()
+        r["cause"] = "nottb"
+        r["rd"] = g.loc["all"].rd - g.loc["tb"].rd
+        lo = hi = np.nan
+        if bd is not None:
+            b = bd[(bd.time_y == hz) & (bd.dmon.isna() if dm == -1 else bd.dmon == dm)]
+            w = b.pivot_table(index="rep", columns="cause", values="rd")
+            if {"all", "tb"} <= set(w.columns):
+                diff = (w["all"] - w["tb"]).dropna()
+                if len(diff) >= 20:
+                    lo, hi = diff.quantile(.025), diff.quantile(.975)
+        r["rd_lo"], r["rd_hi"] = lo, hi
+        r["dmon"] = np.nan if dm == -1 else dm
+        rows.append(r)
+    return pd.concat([d, pd.DataFrame(rows)], ignore_index=True)
 
 
 def main() -> int:
     d, src, nrep = load()
+    d = add_not_tb(d)
     have = sorted(d.time_y.unique())
     missing = [h for h in HORIZONS if h not in have]
     if missing:
         print(f"  NOTE: horizon(s) {missing} absent from {src}; those panels are blank.")
         print("        Re-run 46d with REPORT=2,5.")
 
-    fig, axes = plt.subplots(2, 1, figsize=(9.2, 8.4), sharex=True)
+    fig, axes = plt.subplots(len(HORIZONS), 1, figsize=(9.2, 5.0), sharex=True, squeeze=False)
+    axes = axes[:, 0]
     for ax, hz, letter in zip(axes, HORIZONS, "AB"):
         sub = d[(d.time_y == hz) & d.dmon.notna()]
         ax.axhline(0, color="black", lw=0.8, zorder=1)
@@ -135,10 +177,8 @@ def main() -> int:
                         mfc="white" if null else COL[c], mec=COL[c], mew=1.4,
                         zorder=3)
         ax.set_ylabel(f"Risk difference at {hz} years\n(percentage points)")
-        ax.set_title(f"{hz}-year horizon", fontsize=10.5, weight="bold",
-                     loc="left", pad=10)
-        ax.text(-0.10, 1.03, letter, transform=ax.transAxes, fontsize=14,
-                weight="bold", va="bottom", ha="left")
+        ax.set_title(f"Excess mortality by cause and month of disengagement, {hz} years",
+                     fontsize=10.5, weight="bold", loc="left", pad=10)
         ax.spines[["top", "right"]].set_visible(False)
         ax.margins(x=0.07)
 
@@ -152,18 +192,21 @@ def main() -> int:
 
     xs = sorted(d[d.dmon.notna()].dmon.unique())
     if xs:
-        axes[1].set_xticks(xs)
-    axes[1].set_xlabel("Month of disengagement")
+            axes[-1].set_xticks(xs)
+    axes[-1].set_xlabel("Month of disengagement")
 
-    fig.text(0.5, -0.02,
+    fig.text(0.5, -0.12,
              "Cause-specific cumulative incidence (Aalen-Johansen) standardised to the disengaging "
              f"population, from each patient's own loss-to-follow-up declaration date. {nrep} cluster-bootstrap "
-             "replicates resampling patients. Tuberculosis and non-tuberculosis do not exhaust the deaths: the "
-             "third series is deaths with no attributable cause, and only all three together sum to the "
-             "all-cause excess. Open markers indicate an interval spanning zero.",
+             "replicates resampling patients. The second class is every death not attributed to tuberculosis: "
+             "those positively attributed to another cause, and those whose cause cannot be assigned to either "
+             "(about an eighth of deaths, chiefly respiratory and HIV codes carrying no mention of "
+             "tuberculosis). The two classes sum to the all-cause excess. Open markers indicate an interval "
+             "spanning zero.",
              ha="center", fontsize=8, color="#555555", wrap=True)
 
     fig.tight_layout()
+    fig.subplots_adjust(bottom=0.20)
     for ext in ("png", "pdf"):
         out = RES / f"Figure_5_cause_decomposition.{ext}"
         fig.savefig(out, dpi=300, bbox_inches="tight")
