@@ -82,7 +82,9 @@ source(file.path(.here(), "_paths.R"))
 source(file.path(.here(), "_rolling.R"))
 
 HZ      <- as.numeric(Sys.getenv("HZ", unset = "5"))    # horizon, years
-# 5 years only: owner decision 2026-08-20, one horizon throughout the paper.
+# NB: "one horizon throughout the paper" (owner, 2026-08-20) governs what the
+# manuscript REPORTS, not what this script computes. Reading that as a licence
+# to compute one horizon is what cost the second bootstrap.
 # Default to BOTH horizons, always. Evaluating the CIF at an extra time point is
 # a vector lookup on a grid that has already been computed; the cost of a
 # replicate is the Cox fits, which are identical either way. Run once with
