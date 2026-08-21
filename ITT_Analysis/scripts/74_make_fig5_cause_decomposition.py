@@ -62,8 +62,21 @@ COL = {"tb": "#D55E00", "nontb": "#0072B2", "unclass": "#E69F00", "all": "#00000
 # the cause keeps its colour and the marker is drawn OPEN instead. If the two
 # figures are ever harmonised, move Figure 4 to open markers, not this one to
 # grey.
-LAB = {"tb": "Tuberculosis", "nontb": "Other causes",
-       "unclass": "Cause not classified", "all": "All causes"}
+# Parallel "attributed to" wording, deliberately. An earlier draft used
+# "Other causes" for the second category, which reads as "everything that is not
+# tuberculosis" and therefore appears to swallow the third -- the categories
+# looked overlapping when they are in fact a partition. The second category
+# requires a POSITIVE classification as something other than tuberculosis; the
+# third is the residue that cannot be classified at all.
+LAB = {"tb": "Attributed to tuberculosis",
+       "nontb": "Attributed to another cause",
+       "unclass": "No cause attributed",
+       "all": "All causes"}
+# Panel B interleaves four series per month, so its legend has to stay narrow.
+# Panel A spells the categories out in full a few centimetres to the left, and
+# the colours are shared, so the legend can be terse without losing the reader.
+SHORT = {"all": "All causes", "tb": "Tuberculosis",
+         "nontb": "Another cause", "unclass": "Not attributed"}
 GREY = "#999999"
 ORDER = ["all", "tb", "nontb", "unclass"]
 
@@ -136,7 +149,7 @@ def main() -> int:
             axB.plot([x], [r.rd], "o", ms=5.5,
                      mfc="white" if null else COL[c], mec=COL[c], mew=1.4, zorder=3)
     for c in ORDER:                                   # legend proxies
-        axB.plot([], [], "o-", color=COL[c], label=LAB[c], ms=5.5, lw=1.5)
+        axB.plot([], [], "o-", color=COL[c], label=SHORT[c], ms=5.5, lw=1.5)
     axB.axhline(0, color="black", lw=0.8, zorder=1)
     axB.set_xticks(months)
     axB.set_xlabel("Month of disengagement")
@@ -147,7 +160,7 @@ def main() -> int:
              weight="bold", va="bottom", ha="left")
     # headroom so the legend clears the tallest interval
     lo, hi = axB.get_ylim()
-    axB.set_ylim(lo, hi + 0.16 * (hi - lo))
+    axB.set_ylim(lo, hi + 0.24 * (hi - lo))
     axB.legend(frameon=False, fontsize=8.5, ncol=4, loc="upper center",
                bbox_to_anchor=(0.5, 1.0), columnspacing=1.2, handletextpad=0.4)
     axB.spines[["top", "right"]].set_visible(False)
@@ -156,7 +169,9 @@ def main() -> int:
     fig.text(0.5, -0.04,
              "Cause-specific cumulative incidence (Aalen-Johansen) standardised to the disengaging "
              f"population, from each patient's own loss-to-follow-up declaration date. {nrep} cluster-bootstrap "
-             "replicates resampling patients. The three causes sum to the all-cause estimate by construction. "
+             "replicates resampling patients. The three cause categories are mutually exclusive and exhaustive: "
+             "the second requires a positive attribution to something other than tuberculosis, the third is the "
+             "residue that cannot be attributed at all. They sum to the all-cause estimate by construction. "
              "Open markers indicate an interval spanning zero.",
              ha="center", fontsize=8, color="#555555", wrap=True)
 
