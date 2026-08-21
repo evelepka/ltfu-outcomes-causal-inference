@@ -15,7 +15,12 @@ GRACE_D   <- 30      # days of absence required to meet the LTFU definition
 DAY_MIN   <- 1
 DAY_MAX   <- 180     # end of the intended 6-month course
 K_COMP    <- 20      # comparators sampled per exposed patient per trial
-HORIZON_Y <- 2
+# Default 2, overridable. The manuscript reports five years throughout, so the
+# cause-specific hazard ratios in the Results have to be derived at five as
+# well -- until 2026-08-21 they were 2-year values sitting beside 5-year
+# absolute risks in the same paragraph. Left at 2 by default so nothing else
+# in the rolling family shifts silently.
+HORIZON_Y <- as.numeric(Sys.getenv("HORIZON_Y", unset = "2"))
 SEED      <- 2026
 
 GEO_REF <- "Urbano"  # reference level for geo4; custody folds in here
@@ -81,6 +86,25 @@ build_cause_lookup <- function(verbose = TRUE) {
   cod <- ifelse(is.na(a$cause_of_death_code), "", a$cause_of_death_code)
   known     <- nzchar(cod)
   tb_strict <- known & grepl("^(A1[5-9]|B90|B200)", cod)
+
+  # OPT-IN, default OFF: TB_ANY_LINE=1 counts tuberculosis recorded ANYWHERE on
+  # the death certificate, not only as the underlying cause. The analysis
+  # extract carries CAUSABAS alone -- the Methods say so and call the estimate
+  # conservative for it -- but the full certificate is in
+  # `Banco de dados/LINKAGE SIM (1).xlsx`; 47b_build_tb_anyline_flag.py distils
+  # it. Adds ~23% more tuberculosis deaths, sitting mostly under HIV, COPD and
+  # lung cancer, i.e. exactly the deaths held out of both classes as ambiguous.
+  # Sensitivity analysis only. Leave OFF for anything the manuscript reports.
+  if (nzchar(Sys.getenv("TB_ANY_LINE"))) {
+    fl <- file.path(DATA_DIR, "tb_any_line_flag.csv")
+    if (!file.exists(fl)) stop("TB_ANY_LINE=1 but ", fl, " is missing; run 47b first")
+    anyl <- read.csv(fl, colClasses = "character")
+    anyl <- anyl[anyl$tb_anyline == "1", "sinan_clean"]
+    add <- as.character(a$sinan_clean) %in% trimws(anyl)
+    cat(sprintf("  [cause] TB_ANY_LINE=1: %d deaths reclassified as tuberculosis\n",
+                sum(add & !tb_strict)))
+    tb_strict <- tb_strict | add
+  }
   resp      <- known & grepl("^J[0-9]", cod)
   hiv_other <- known & grepl("^B2[0-4]", cod) & !grepl("^B200", cod)
 
