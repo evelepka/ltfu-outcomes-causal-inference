@@ -83,7 +83,13 @@ source(file.path(.here(), "_rolling.R"))
 
 HZ      <- as.numeric(Sys.getenv("HZ", unset = "5"))    # horizon, years
 # 5 years only: owner decision 2026-08-20, one horizon throughout the paper.
-REPORT  <- as.numeric(strsplit(Sys.getenv("REPORT", unset = "5"), ",")[[1]])
+# Default to BOTH horizons, always. Evaluating the CIF at an extra time point is
+# a vector lookup on a grid that has already been computed; the cost of a
+# replicate is the Cox fits, which are identical either way. Run once with
+# REPORT=5 on 2026-08-20 and the 2-year panel of Figure 5 then cost a second
+# 9.5-hour bootstrap to recover numbers the first run had already computed and
+# discarded. Narrow this only with a reason.
+REPORT  <- as.numeric(strsplit(Sys.getenv("REPORT", unset = "2,5"), ",")[[1]])
 NGRID   <- 400                                          # time grid for the integral
 CAUSES  <- c("tb", "nontb", "unclass")
 BYMONTH <- nzchar(Sys.getenv("BYMONTH", unset = "1"))   # also do months 1-6
