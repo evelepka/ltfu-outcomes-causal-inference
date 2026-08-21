@@ -74,7 +74,13 @@ def load():
         if p.exists():
             d = pd.read_csv(p)
             if "n_reps" in d and d.n_reps.notna().any():
-                return d, name, int(d.n_reps.max())
+                # Report the RANGE, not the maximum. Replicates that could not
+                # estimate a given month still contributed to others, so cells
+                # differ in how many replicates stand behind them; quoting the
+                # best-supported cell would overstate the thinnest one.
+                n = d[d.time_y == HZ].n_reps.dropna()
+                lo, hi = int(n.min()), int(n.max())
+                return d, name, (lo if lo == hi else f"{lo}-{hi}")
     sys.exit("no bootstrapped CIF file yet -- run 46d, or 46e for a partial run")
 
 
