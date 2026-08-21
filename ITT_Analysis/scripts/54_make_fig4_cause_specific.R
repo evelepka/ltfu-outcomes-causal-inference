@@ -1,5 +1,5 @@
 # 54. Figure 5 — Cause-specific mortality (TB vs non-TB) target-trial
-# 2026-08-16: now reads *_fixedattr.csv (Obito outcome from ANY episode).
+# ADR-0003: now reads *_fixedattr.csv (Obito outcome from ANY episode).
 # Outputs carry a _fixedattr suffix; the pre-fix figures are retained.
 # ==============================================================================
 # Main-manuscript figure: hybrid attribution (SIM ICD-10 + TBweb Obito TB/NTB).
