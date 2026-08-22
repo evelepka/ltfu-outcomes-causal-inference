@@ -23,10 +23,17 @@
 #
 # WHAT IT DOES NOT DO
 # ---------------------------------------------------------------------------
-# No confidence intervals. These are point estimates only. A cluster bootstrap on
-# patient id -- resampling patients and rebuilding the stack per replicate, as
-# script 45 does -- is still needed, and the by-month cells are not interpretable
-# without it. Do not put these numbers in the manuscript as they stand.
+# ADDED 2026-08-20: the cluster bootstrap this section said was still needed.
+# `B=300 Rscript 45b_...` resamples patients in the prepped data and rebuilds the
+# stack per replicate, with a distinct seed each time and the imputation drawn at
+# random, exactly as script 45 does. Without `B` the behaviour is unchanged and
+# the output is still point estimates only.
+#
+# The cell the 2026-08-20 decision turns on is month 6 at the five-year horizon:
+# +0.94 pp on ~1,497 exposed. If its interval excludes zero the timing analysis
+# can be reported on the risk-difference scale alone and the whole PH argument
+# leaves the paper; if it crosses zero the hazard ratios have to carry "no safe
+# month". The bootstrap prints that cell's diagnostics explicitly.
 #
 # Within a month trial_day spans ~30 days, so it enters linearly there; across
 # all months it is a 3-df spline, matching script 45.
@@ -133,8 +140,8 @@ outcome_lk <- build_outcome_lookup()
 imp_files <- sort(list.files(ITT_MI_DIR, pattern = "^imp_\\d+\\.csv$", full.names = TRUE))
 n_imp <- as.integer(Sys.getenv("N_IMP", unset = length(imp_files)))
 imp_files <- imp_files[seq_len(min(n_imp, length(imp_files)))]
-stacks <- lapply(imp_files, function(p)
-  build_rolling(prepare_rolling(p, outcome_lookup = outcome_lk), comparator = "in_care"))
+prepped <- lapply(imp_files, prepare_rolling, outcome_lookup = outcome_lk)
+stacks  <- lapply(prepped, build_rolling, comparator = "in_care")
 for (i in seq_along(stacks))
   stacks[[i]]$dmon <- pmin(ceiling(stacks[[i]]$trial_day / 30.4), 6)
 cat(sprintf("[rd] %d imputations | horizon %g y | periods %s\n", length(stacks), HZ,
@@ -162,6 +169,99 @@ for (m in 1:6) {
                n_exposed = r$n_exposed[i])
 }
 res <- bind_rows(rows)
+
+# ---------------------------------------------------------------------------
+# CLUSTER BOOTSTRAP (B > 0)
+# Resample PATIENTS in the prepped data and rebuild the stack; resampling rows of
+# a built stack would suppress comparator sampling variability, which is the
+# mistake script 45's comments record. Distinct seed per replicate because
+# build_rolling() seeds internally with a fixed default, and a random imputation
+# per replicate so the interval carries imputation uncertainty too.
+# ---------------------------------------------------------------------------
+B <- as.integer(Sys.getenv("B", unset = "0"))
+if (B > 0) {
+  cat(sprintf("\n=== cluster bootstrap, B=%d ===\n", B))
+  set.seed(4545)
+  # MONTHS lets the decision cell be bootstrapped on its own: each replicate
+  # fits one model per month, so restricting to month 6 is ~6x faster and the
+  # 5-year month-6 interval is what the reporting decision turns on.
+  BMONTHS <- as.integer(strsplit(Sys.getenv("MONTHS", unset = "1,2,3,4,5,6"), ",")[[1]])
+  cat(sprintf("  months bootstrapped: %s\n", paste(BMONTHS, collapse = ",")))
+  imp_pick <- sample.int(length(prepped), B, replace = TRUE)
+  draws <- list(); t0 <- Sys.time()
+  for (b in seq_len(B)) {
+    d  <- prepped[[imp_pick[b]]]
+    dd <- d[sample.int(nrow(d), nrow(d), replace = TRUE), , drop = FALSE]
+    dd$pid <- seq_len(nrow(dd))
+    sb <- build_rolling(dd, comparator = "in_care", seed = SEED + 1000L * b)
+    sb$dmon <- pmin(ceiling(sb$trial_day / 30.4), 6)
+    for (m in BMONTHS) {
+      r <- std_risks(fit_flex(sb[sb$dmon == m, , drop = FALSE], COVARS, TRUE))
+      if (is.null(r)) next
+      for (i in seq_len(nrow(r)))
+        draws[[length(draws) + 1]] <- data.frame(dmon = m, time_y = r$time_y[i],
+                                                 rd = r$rd[i], rr = r$rr[i])
+    }
+    if (b %% 10 == 0) {
+      el <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+      cat(sprintf("  rep %d/%d  %.1fs/rep  ETA %.1f min\n",
+                  b, B, el / b, el / b * (B - b) / 60))
+    }
+  }
+  bd <- bind_rows(draws)
+  ci <- bd |> group_by(dmon, time_y) |>
+    summarise(rd_lo = quantile(rd, .025, na.rm = TRUE),
+              rd_hi = quantile(rd, .975, na.rm = TRUE),
+              rd_boot_mean = mean(rd, na.rm = TRUE),
+              rr_lo = quantile(rr, .025, na.rm = TRUE),
+              rr_hi = quantile(rr, .975, na.rm = TRUE),
+              B_ok = n(), .groups = "drop")
+  res <- left_join(res, ci, by = c("dmon", "time_y"))
+  # Write immediately. A first attempt lost 300 replicates to an NA in the
+  # printing loop below, because MONTHS had restricted the bootstrap and the
+  # unbootstrapped months carry no interval.
+  write.csv(res, file.path(ITT_RESULTS_DIR, "rolling_rd_by_month_boot.csv"),
+            row.names = FALSE)
+  cat(sprintf("  draws persisted to rolling_rd_by_month_boot.csv\n"))
+
+  for (t in REPORT) {
+    cat(sprintf("\n  --- horizon %g y, with %d-replicate CIs ---\n", t, B))
+    sres <- res[res$time_y == t, ]
+    for (i in seq_len(nrow(sres))) {
+      if (is.na(sres$rd_lo[i])) {
+        cat(sprintf("  month %d: RD %+.2f  (not bootstrapped this run)\n",
+                    sres$dmon[i], sres$rd[i]))
+        next
+      }
+      bias <- sres$rd_boot_mean[i] - sres$rd[i]
+      zero <- if (isTRUE(sres$rd_lo[i] < 0 && sres$rd_hi[i] > 0)) " *includes zero*" else ""
+      cat(sprintf("  month %d: RD %+.2f (%+.2f to %+.2f)  bias %+.3f  reps %d%s\n",
+                  sres$dmon[i], sres$rd[i], sres$rd_lo[i], sres$rd_hi[i],
+                  bias, sres$B_ok[i], zero))
+    }
+  }
+  # A percentile interval from a handful of replicates is not an interval: with
+  # B=4 this printed "excludes zero" from a range that did not even contain the
+  # point estimate. Refuse to render the verdict below that threshold.
+  MIN_B_FOR_VERDICT <- 100
+  d6 <- res[res$dmon == 6 & res$time_y == HZ, ]
+  if (nrow(d6)) {
+    cat(sprintf("\n  DECISION CELL -- month 6 at %g y: RD %+.2f (%+.2f to %+.2f), %d reps\n",
+                HZ, d6$rd, d6$rd_lo, d6$rd_hi, d6$B_ok))
+    if (is.na(d6$rd_lo) || is.na(d6$B_ok) || d6$B_ok < MIN_B_FOR_VERDICT) {
+      cat(sprintf("  -> NO VERDICT: %s replicates is too few for a 2.5/97.5 percentile.\n",
+                  ifelse(is.na(d6$B_ok), "0", d6$B_ok)))
+    } else if (d6$rd < d6$rd_lo || d6$rd > d6$rd_hi) {
+      cat("  -> NO VERDICT: the interval does not contain the point estimate,\n",
+          "     which means the resampling is biased. Do not use it.\n", sep = "")
+    } else if (d6$rd_lo > 0) {
+      cat("  -> excludes zero: 'no safe month' holds on the RD scale alone.\n")
+    } else {
+      cat("  -> includes zero: the RD scale cannot carry 'no safe month'; the\n",
+          "     hazard ratios have to, and the PH caveat stays in the paper.\n", sep = "")
+    }
+  }
+}
 for (t in REPORT) {
   cat(sprintf("\n  --- horizon %g y ---\n", t))
   s <- res[res$time_y == t, ]
@@ -171,8 +271,11 @@ for (t in REPORT) {
                 format(s$n_exposed[i], big.mark = ",")))
 }
 ov$dmon <- NA_integer_
-allout <- bind_rows(ov[, c("dmon", "time_y", "risk1", "risk0", "rd", "rr",
-                          "n_exposed")], res)
+keep <- intersect(c("dmon","time_y","risk1","risk0","rd","rr","n_exposed",
+                    "rd_lo","rd_hi","rd_boot_mean","rr_lo","rr_hi","B_ok"),
+                  names(res))
+ovk <- ov[, intersect(keep, names(ov))]
+allout <- bind_rows(ovk, res[, keep])
 write.csv(allout, file.path(ITT_RESULTS_DIR, "rolling_rd_by_month.csv"),
           row.names = FALSE)
 cat(sprintf("\n[45b] wrote %d rows to rolling_rd_by_month.csv (dmon=NA is overall)\n",

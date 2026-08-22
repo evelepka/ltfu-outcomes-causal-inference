@@ -27,7 +27,8 @@ from lifelines import KaplanMeierFitter, CoxPHFitter
 # Project root: env override, else resolve relative to this file. The previous
 # hardcoded absolute path pointed at 'Abandonment Paper', but the shared folder
 # is now 'LTFU Paper', so the script could not open its own inputs. 22 of the
-# 24 Python scripts in this directory still carry the stale path .
+# 24 Python scripts in this directory still carry the stale path -- see
+# docs/dead-ends.md.
 import os
 BASE = Path(os.environ.get("TB_ABANDONMENT_ROOT", "")) if os.environ.get(
     "TB_ABANDONMENT_ROOT") else Path(__file__).resolve().parents[2]
@@ -56,7 +57,7 @@ novo = raw[raw['case_type'].str.strip().str.lower().eq('novo')
 novo = novo.sort_values('end_date')
 first_outcome = novo.drop_duplicates('sinan_clean', keep='first')[['sinan_clean','case_outcome']]
 
-# --- FIX (2026-08-16): take the Obito outcome from ANY episode ----------------
+# --- ADR-0003 FIX: take the Obito outcome from ANY episode ----------------
 # Index-only lookup cannot see an LTFU patient's death, because their index
 # episode closes as `Abandono`. 1,058 of 1,668 LTFU deaths (63.4%) are
 # recorded on a retreatment episode instead. Verified same-death (median
@@ -69,7 +70,7 @@ first_outcome = first_outcome.merge(_ob, on='sinan_clean', how='outer')
 first_outcome['case_outcome'] = first_outcome['_obito'].combine_first(
     first_outcome['case_outcome'])
 first_outcome = first_outcome.drop(columns=['_obito'])
-print(f"[cause-fix] Obito outcome recovered from any episode for {len(_ob):,} individuals")
+print(f"[ADR-0003] Obito outcome recovered from any episode for {len(_ob):,} individuals")
 
 deathrec = raw[raw['dod'].notna() & raw['cause_of_death_code'].notna()
                & raw['cause_of_death_code'].str.strip().ne('')].copy()
