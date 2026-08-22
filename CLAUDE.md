@@ -36,7 +36,7 @@ A collaborator (Evelyn Lepka de Lima) has her own GDrive mount at
 ## The cohort situation
 
 **There is ONE cohort file, not two.** `ITT_Analysis/data/itt_cohort.csv`
-contains both `"Loss to follow-up"` and `"Non-LTFU"` individuals (N=172,463).
+contains both `"Loss to follow-up"` and `"Non-LTFU"` individuals (N=171,048).
 The "abandoners-only" cohort is `filter(itt_group == "Loss to follow-up")`
 applied at read-time. See `COHORT_SELECTION.md` for full detail.
 

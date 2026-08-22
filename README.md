@@ -6,9 +6,9 @@ The headline analysis is a **sequential target-trial emulation** with a symmetri
 
 ## Cohort
 
-- **N = 171,069** individuals initiating tuberculosis therapy (2013–2023; first episode; recorded treatment start required).
+- **N = 171,048** individuals initiating tuberculosis therapy (2013–2023; first episode; recorded treatment start required).
 - **20,830 (12.2%)** experienced loss to follow-up during the index treatment.
-- **150,239** had alternative outcomes (cure, on-treatment death, treatment failure, regimen change).
+- **150,218** had alternative outcomes (cure, on-treatment death, treatment failure, regimen change).
 - Median post-LTFU follow-up: 5.0 years (IQR 2.5–8.0).
 
 ## Key results

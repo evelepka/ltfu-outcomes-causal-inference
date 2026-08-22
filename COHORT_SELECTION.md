@@ -38,11 +38,16 @@ script writes it except `01_itt_cohort_selection.py`.
 | Output (flowchart) | `$PROJECT_ROOT/Data/exclusion_flowchart.csv` |
 | Output (docx) | `$PROJECT_ROOT/ITT_Analysis/results/Inclusion_Exclusion_ITT.docx` |
 
-`$PROJECT_ROOT` resolves in this order (see `01_itt_cohort_selection.py`):
+`$PROJECT_ROOT` resolves in this order (see `_paths.py` / `_paths.R`):
 1. `TB_ABANDONMENT_ROOT` environment variable
-2. `~/Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/My Drive/Abandonment Paper`
-3. `~/Library/CloudStorage/GoogleDrive-evelynlepka@gmail.com/My Drive/Abandonment Outcomes/Abandonment Paper`
-4. Script-relative fallback (`../../` from the script)
+2. `~/Library/CloudStorage/GoogleDrive-evelynlepka@gmail.com/My Drive/TB SP 2026/LTFU Paper`
+3. `~/Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/My Drive/Abandonment Paper`
+4. `~/Library/CloudStorage/GoogleDrive-evelynlepka@gmail.com/My Drive/Abandonment Outcomes/Abandonment Paper`
+
+A candidate only counts if it actually contains `ITT_Analysis/data`. There is
+**no** script-relative fallback: if nothing resolves, the scripts raise. The old
+fallback resolved `PROJECT_ROOT` to `$HOME` on an unmounted machine and every
+downstream path silently became `~/ITT_Analysis/...` (ADR-0002).
 
 ---
 
@@ -62,23 +67,27 @@ case) TB episode** with a valid outcome code.
 
 ## 3. Inclusion / exclusion flow
 
-Numbers below are from the most recent run (2026-04-22). They are auto-written
-to `Data/exclusion_flowchart.csv` every time the script runs; treat that CSV
-as authoritative.
+Numbers below are auto-written to `Data/exclusion_flowchart.csv` every time the
+script runs; treat that CSV as authoritative. They are pinned in
+`test/golden/prose_numbers.yaml` and re-checked by `bash test/run_fast.sh`, so
+this table cannot silently fall out of date again (it did, for three months and
+across two exclusion-criteria changes — see `docs/dead-ends.md`).
 
 | Step | N remaining | Excluded |
 |---|---:|---:|
 | Initial: First Novo episode per individual (transfers already removed) | 198,409 | — |
 | Exclude: Age < 15 years | 192,231 | 6,178 |
 | Exclude: Treatment end date outside 2013–2023 | 174,354 | 17,877 |
-| Exclude: Death on or before treatment start/proxy (immortal-time guard) | 172,464 | 1,890 |
-| Exclude: Invalid dates (end_date < tx_start) | 172,463 | 1 |
-| **Final cohort N = 172,463** | | |
+| Exclude: No recorded treatment start date (Abandono Primario) | 171,576 | 2,778 |
+| Exclude: Death on or before treatment start/proxy (immortal-time guard) | 171,070 | 506 |
+| Exclude: Invalid dates (end_date < tx_start) | 171,069 | 1 |
+| Exclude: Post-mortem identification (discovered after death) | 171,048 | 21 |
+| **Final cohort N = 171,048** | | |
 
 Composition:
 
-- **Loss to follow-up (LTFU / abandoned): 21,619** — `case_outcome ∈ {Abandono, Abandono Primario, Faltoso}`
-- **Non-LTFU (maintained care): 150,844** — any other valid definitive outcome
+- **Loss to follow-up (LTFU / abandoned): 20,830** — `case_outcome ∈ {Abandono, Abandono Primario, Faltoso}`
+- **Non-LTFU (maintained care): 150,218** — any other valid definitive outcome
 - **Excluded: transfers (`Transf Outro Municipio`, `Transf Outro Estado/Pais`)** — dropped before counting, not in the flowchart
 
 ---
@@ -194,8 +203,14 @@ Any time `Final_table_cleaned.csv` changes, or the cohort script changes,
 rerun:
 
 ```bash
-cd /Users/jasonandrews/repos/outcomes-after-tb-abandonment
 python3 ITT_Analysis/scripts/01_itt_cohort_selection.py
+```
+
+Then run the fast tier, which reports whether the rebuild moved any number this
+repo's prose or figures depend on:
+
+```bash
+bash test/run_fast.sh
 ```
 
 Outputs land in the Google Drive paths listed in §1. Commit any script
@@ -235,9 +250,8 @@ Files previously present that have been deleted (2026-04-22):
   `analysis_cohort_21640.csv`, the historical `exclusion_flowchart.csv`)
   reference N=21,640. That was the N of an *LTFU-only* cohort constructed
   under pre-ITT logic (the old flowchart started from 38,423 abandonment
-  records, not 198,409 Novo episodes). The current ITT cohort has 21,619
-  LTFU within a total of 172,463, which matches the headline numbers in
-  `README.md`. No drift.
+  records, not 198,409 Novo episodes). The current ITT cohort has 20,830
+  LTFU within a total of 171,048.
 - **R script working-directory inconsistency**: Some R scripts read
   `"ITT_Analysis/data/itt_cohort.csv"`, others read
   `"Abandonment Paper/ITT_Analysis/data/itt_cohort.csv"`. Both work if the

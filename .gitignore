@@ -43,3 +43,16 @@ tools/*
 # 48_make_literature_docx.py stays in Google Drive: it hardcodes the manuscript's
 # effect estimates and the prior-literature comparison, i.e. unpublished results.
 ITT_Analysis/scripts/48_make_literature_docx.py
+
+# Figure scripts that hardcode unpublished effect estimates (and, for 61, the
+# private revision path) so they can be rendered into the figure itself. Same
+# reason 48_make_literature_docx.py is excluded: this repo is public and the
+# estimates are under review. Both live in Google Drive.
+ITT_Analysis/scripts/61_fig_design_schematic.py
+ITT_Analysis/scripts/73_make_fig4_revised.py
+
+# Agent tooling: per-user permission grants, and agent worktrees (which are full
+# embedded repo copies). Note gitignore has no trailing comments — a pattern with
+# a comment appended to the same line matches nothing.
+.claude/settings.local.json
+.claude/worktrees/
