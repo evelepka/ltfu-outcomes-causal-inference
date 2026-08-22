@@ -29,6 +29,10 @@ suppressPackageStartupMessages({
   getwd()
 }
 source(file.path(.here(), "_paths.R"))
+# build_cause_lookup() is canonical (see .claude/rules/analysis-conventions.md);
+# do not re-derive the cause classes here. Needed because panels B and C now
+# split deaths into tuberculosis and non-tuberculosis.
+source(file.path(.here(), "_rolling.R"))
 
 OUT_PNG <- file.path(ITT_RESULTS_DIR, "Figure_1_descriptive.png")
 OUT_PDF <- file.path(ITT_RESULTS_DIR, "Figure_1_descriptive.pdf")
@@ -77,6 +81,27 @@ df_aband <- ltfu |> dplyr::filter(abandon_months >= 0, abandon_months <= 6)
 df_retx  <- ltfu |> dplyr::filter(event_rn == 1, time_rn <= 12)
 df_death <- ltfu |> dplyr::filter(event_d  == 1, time_d  <= 12)
 
+# Owner 2026-08-21: the retreatment panel is replaced by the two cause-specific
+# death-timing panels, so the triptych becomes timing of LTFU, then time to
+# tuberculosis death, then time to non-tuberculosis death.
+cause_lk <- build_cause_lookup(verbose = FALSE)
+df_death <- merge(df_death, cause_lk[, c("sinan_clean", "tb_hybrid", "nontb_hybrid")],
+                  by = "sinan_clean", all.x = TRUE)
+# tb_hybrid and nontb_hybrid are NOT complements, on purpose: unknown-cause,
+# respiratory and HIV-other deaths belong to NEITHER class and are censored in both
+# cause-specific analyses (_rolling.R, comment at line 48). Using !tb_hybrid for
+# panel C swept 237 such deaths into a panel labelled "non-tuberculosis" -- 22% of
+# it -- contradicting the primary analysis. Use nontb_hybrid explicitly.
+df_death$tb_hybrid    <- !is.na(df_death$tb_hybrid)    & df_death$tb_hybrid
+df_death$nontb_hybrid <- !is.na(df_death$nontb_hybrid) & df_death$nontb_hybrid
+df_death_tb  <- df_death[df_death$tb_hybrid, , drop = FALSE]
+df_death_ntb <- df_death[df_death$nontb_hybrid, , drop = FALSE]
+n_unclass <- sum(!df_death$tb_hybrid & !df_death$nontb_hybrid)
+cat(sprintf(paste0("[fig] deaths within 12 y: %d TB, %d non-TB; %d unclassifiable ",
+                   "(unknown cause / respiratory / HIV-other) in NEITHER panel ",
+                   "-- must be stated in the caption\n"),
+            nrow(df_death_tb), nrow(df_death_ntb), n_unclass))
+
 build_raincloud <- function(df, x_var, x_label, title_text, fill_color,
                              x_limits, x_breaks, median_suffix = "") {
   med_val <- median(df[[x_var]], na.rm = TRUE)
@@ -112,16 +137,16 @@ pA <- build_raincloud(df_aband, "abandon_months",
                        sprintf("A. Timing of LTFU (N = %s)",
                                scales::comma(nrow(df_aband))),
                        "#e74c3c", c(0, 6), 0:6, " months")
-pB <- build_raincloud(df_retx, "time_rn",
+pB <- build_raincloud(df_death_tb, "time_d",
                        "Years since LTFU",
-                       sprintf("B. Time to retreatment (N = %s)",
-                               scales::comma(nrow(df_retx))),
-                       "#f1c40f", c(0, 12), seq(0, 12, 2), " years")
-pC <- build_raincloud(df_death, "time_d",
+                       sprintf("B. Time to death, tuberculosis (N = %s)",
+                               scales::comma(nrow(df_death_tb))),
+                       "#D55E00", c(0, 12), seq(0, 12, 2), " years")
+pC <- build_raincloud(df_death_ntb, "time_d",
                        "Years since LTFU",
-                       sprintf("C. Time to death (N = %s)",
-                               scales::comma(nrow(df_death))),
-                       "#2c3e50", c(0, 12), seq(0, 12, 2), " years")
+                       sprintf("C. Time to death, non-tuberculosis (N = %s)",
+                               scales::comma(nrow(df_death_ntb))),
+                       "#0072B2", c(0, 12), seq(0, 12, 2), " years")
 
 # ---------------------------------------------------------------------------
 # Compose — three rainclouds (A, B, C) stacked on the left,

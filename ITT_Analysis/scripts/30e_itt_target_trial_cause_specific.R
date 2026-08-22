@@ -78,7 +78,7 @@ novo <- novo[!is.na(novo$case_outcome)
              & !novo$case_outcome %in% TRANSFER, ]
 novo <- novo[order(novo$end_date), ]
 first <- novo[!duplicated(novo$sinan_clean), c("sinan_clean", "case_outcome")]
-# --- FIX (2026-08-16): take the Obito outcome from ANY episode ---------------
+# --- ADR-0003 FIX: take the Obito outcome from ANY episode ---------------
 # The block above finds the INDEX (first Novo) episode outcome. An LTFU
 # patient's index episode closes as `Abandono`, which can never be
 # `Obito TB`/`Obito NTB` -- so index-only lookup discarded TBweb cause of
@@ -100,7 +100,7 @@ first <- merge(first, obito, by = "sinan_clean", all = TRUE)
 first$case_outcome <- ifelse(!is.na(first$obito_outcome),
                              first$obito_outcome, first$case_outcome)
 first$obito_outcome <- NULL
-cat(sprintf("[cause-fix] Obito outcome recovered from any episode for %d individuals\n",
+cat(sprintf("[ADR-0003] Obito outcome recovered from any episode for %d individuals\n",
             nrow(obito)))
 
 

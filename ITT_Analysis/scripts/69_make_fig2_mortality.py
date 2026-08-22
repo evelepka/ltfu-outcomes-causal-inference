@@ -20,9 +20,35 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from lifelines import KaplanMeierFitter
+from statsmodels.duration.survfunc import SurvfuncRight
 
-ROOT = os.path.expanduser("~/Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/My Drive/Abandonment Paper")
+
+class _KM:
+    """Minimal Kaplan-Meier with the .predict(t) lifelines offers.
+
+    lifelines is not installed here, and installing it pulled a pandas 1.5 -> 2.3
+    upgrade that broke another dependency, so this uses statsmodels, which the
+    project already depends on. Same estimator; step function evaluated at t.
+    """
+
+    def __init__(self, t, e):
+        self.sf = SurvfuncRight(t, e)
+
+    def predict(self, times):
+        times = np.atleast_1d(np.asarray(times, dtype=float))
+        idx = np.searchsorted(self.sf.surv_times, times, side="right") - 1
+        out = np.where(idx < 0, 1.0, self.sf.surv_prob[np.clip(idx, 0, None)])
+        return out if out.size > 1 else float(out[0])
+
+# Was hardcoded to one collaborator's Drive mount, so it could not run anywhere
+# else. Resolve like the rest of the pipeline.
+import pathlib as _pl
+ROOT = str(_pl.Path(__file__).resolve().parents[2])   # <root>/ITT_Analysis/scripts/
+
+# Horizon in YEARS. The 2026-08-19 decision moved the paper to 5 years; this is
+# parameterised so 2 and 5 can be compared side by side before choosing.
+HZ_Y = float(os.environ.get("HORIZON_Y", "2"))
+HZ_M = int(round(HZ_Y * 12))
 d = pd.read_csv(os.path.join(ROOT, "ITT_Analysis/data/itt_cohort.csv"), low_memory=False,
                parse_dates=["best_start", "end_date"])
 
@@ -33,9 +59,10 @@ def _clean(t, e):
     return t[m].values, e[m].astype(int).values
 
 def km_fit(t, e):
-    t, e = _clean(t, e); return KaplanMeierFitter().fit(t, e)
+    t, e = _clean(t, e); return _KM(t, e)
 
-def km_risk(t, e, h=2.0):
+def km_risk(t, e, h=None):
+    h = HZ_Y if h is None else h
     return float(1 - km_fit(t, e).predict(h))
 
 ltfu = d[(d.itt_group == "Loss to follow-up") & (d.time_d > 0)].copy()
@@ -64,16 +91,16 @@ def barpanel(ax, dat, title):
     xx=np.arange(len(dat)); ax.bar(xx, vals, color=cols)
     for i in range(len(dat)):
         ax.text(xx[i], vals[i]+0.1, f"{vals[i]:.1f}%\n(n={ns[i]:,})", ha="center", va="bottom", fontsize=8)
-    ax.set_xticks(xx); ax.set_xticklabels(labs); ax.set_ylabel("24-month mortality (%)")
+    ax.set_xticks(xx); ax.set_xticklabels(labs); ax.set_ylabel(f"{HZ_M}-month mortality (%)")
     ax.set_title(title, fontsize=10, weight="bold"); ax.set_ylim(0, max(vals)*1.35)
     ax.spines[["top","right"]].set_visible(False)
 
 fig, axes = plt.subplots(2, 3, figsize=(15, 8.5))
 # A (x-axis in months)
-ax = axes[0,0]; cmap = plt.cm.YlOrRd(np.linspace(0.4, 0.95, 6)); tl = np.linspace(0, 2, 100)
+ax = axes[0,0]; cmap = plt.cm.YlOrRd(np.linspace(0.4, 0.95, 6)); tl = np.linspace(0, HZ_Y, 200)
 for i, (m, lab) in enumerate(B_bins):
     ax.plot(tl*12, (1-A_km[lab].predict(tl))*100, color=cmap[i], lw=2, label=lab)
-ax.set_xlim(0, 24); ax.set_xticks([0, 6, 12, 18, 24])
+ax.set_xlim(0, HZ_M); ax.set_xticks(np.linspace(0, HZ_M, 5).astype(int))
 ax.set_xlabel("Months since LTFU"); ax.set_ylabel("Cumulative mortality (%)")
 ax.set_title("A. Mortality by month of disengagement", fontsize=10, weight="bold")
 ax.legend(frameon=False, ncol=2, fontsize=8, title="Month of disengagement")
@@ -84,5 +111,5 @@ barpanel(axes[1,0], HOUS, "D. Housing status")
 barpanel(axes[1,1], AGE,  "E. Age at diagnosis (years)")
 barpanel(axes[1,2], ALC,  "F. Alcohol use")
 fig.tight_layout()
-out = os.path.join(ROOT, "ITT_Analysis/results/Figure_2_mortality_descriptive.png")
+out = os.path.join(ROOT, f"ITT_Analysis/results/Figure_2_mortality_descriptive_{HZ_M}mo.png")
 fig.savefig(out, dpi=300); print("wrote", out)
