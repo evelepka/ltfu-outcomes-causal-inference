@@ -87,20 +87,35 @@ df_death <- ltfu |> dplyr::filter(event_d  == 1, time_d  <= 12)
 cause_lk <- build_cause_lookup(verbose = FALSE)
 df_death <- merge(df_death, cause_lk[, c("sinan_clean", "tb_hybrid", "nontb_hybrid")],
                   by = "sinan_clean", all.x = TRUE)
-# tb_hybrid and nontb_hybrid are NOT complements, on purpose: unknown-cause,
-# respiratory and HIV-other deaths belong to NEITHER class and are censored in both
-# cause-specific analyses (_rolling.R, comment at line 48). Using !tb_hybrid for
-# panel C swept 237 such deaths into a panel labelled "non-tuberculosis" -- 22% of
-# it -- contradicting the primary analysis. Use nontb_hybrid explicitly.
 df_death$tb_hybrid    <- !is.na(df_death$tb_hybrid)    & df_death$tb_hybrid
 df_death$nontb_hybrid <- !is.na(df_death$nontb_hybrid) & df_death$nontb_hybrid
+
+# TWO CLASSES, tuberculosis and NOT tuberculosis (owner decision 2026-08-21).
+# The residual class is `!tb_hybrid` ON PURPOSE, not nontb_hybrid: the paper
+# reports a two-class partition so the parts sum to the all-cause total, and the
+# deaths that sit outside `nontb_hybrid` (respiratory, HIV-other, and one
+# genuinely unknown cohort-wide) carry a recorded cause and are non-TB deaths.
+# Using nontb_hybrid here would silently drop 237 real deaths and disagree with
+# the reported cause decomposition. Do not "fix" this to nontb_hybrid -- that
+# was tried on 2026-08-21 and reverted the same day.
 df_death_tb  <- df_death[df_death$tb_hybrid, , drop = FALSE]
-df_death_ntb <- df_death[df_death$nontb_hybrid, , drop = FALSE]
-n_unclass <- sum(!df_death$tb_hybrid & !df_death$nontb_hybrid)
-cat(sprintf(paste0("[fig] deaths within 12 y: %d TB, %d non-TB; %d unclassifiable ",
-                   "(unknown cause / respiratory / HIV-other) in NEITHER panel ",
-                   "-- must be stated in the caption\n"),
-            nrow(df_death_tb), nrow(df_death_ntb), n_unclass))
+df_death_ntb <- df_death[!df_death$tb_hybrid, , drop = FALSE]
+
+# Emitted so tools/check_partition.py can assert the classes partition the
+# deaths. A residual defined as nontb_hybrid would break this sum, which is
+# exactly how the reverted change should have been caught.
+n_outside_named <- sum(!df_death$tb_hybrid & !df_death$nontb_hybrid)
+cat(sprintf(paste0("[fig] deaths within 12 y: %d total = %d tuberculosis + %d ",
+                   "not tuberculosis; of the residual, %d fall outside the named ",
+                   "non-TB class and are absorbed by it (see caption)\n"),
+            nrow(df_death), nrow(df_death_tb), nrow(df_death_ntb),
+            n_outside_named))
+write.csv(data.frame(all_deaths = nrow(df_death),
+                     tb = nrow(df_death_tb),
+                     not_tb = nrow(df_death_ntb),
+                     outside_named_nontb = n_outside_named),
+          file.path(ITT_RESULTS_DIR, "Figure_1_cause_partition.csv"),
+          row.names = FALSE)
 
 build_raincloud <- function(df, x_var, x_label, title_text, fill_color,
                              x_limits, x_breaks, median_suffix = "") {
