@@ -100,12 +100,34 @@ n = len(base)
 
 recs = []
 t0 = time.time()
-for b in range(B + 1):                       # b=0 is the point estimate
-    imp = imps[0] if b == 0 else imps[rng.integers(len(imps))]
-    tl = base if b == 0 else ccw.load_timeline(imp, lookup, verbose=False)
-    if b > 0:
-        idx = rng.integers(0, n, n)          # resample PATIENTS with replacement
-        tl = tl.iloc[idx].reset_index(drop=True)
+# b=0 is the POINT estimate and is MI-POOLED: one pass per imputation on the
+# UNRESAMPLED data, averaged (Rubin's rule). It used to be imps[0] alone, which
+# reported a single-imputation value (nested T=6 RD 2.2241) while the CI
+# replicates drew an imputation at random -- the source of the long-standing
+# "2.22 vs 2.23" discrepancy. Per-imputation RDs span 2.2143 to 2.2428, so the
+# choice moves the second decimal. Do not revert to imps[0].
+pooled = {}
+for imp in imps:
+    tl_i = ccw.load_timeline(imp, lookup, verbose=False)
+    tl_i, Xpat_i = ccw.attach_patterns(tl_i, ccw.COVS)
+    md, me, mc, ma = prep(tl_i)
+    rr, rd = nested_rd(tl_i, Xpat_i)
+    pooled.setdefault("nested_T6", []).append((rr, rd))
+    for M in MONTHS:
+        rr, rd = seq_rd(tl_i, Xpat_i, M, md, me, mc, ma)
+        pooled.setdefault(f"seq_M{M}", []).append((rr, rd))
+for w, vals in pooled.items():
+    recs.append({"b": 0, "which": w,
+                 "rr": sum(v[0] for v in vals) / len(vals),
+                 "rd": sum(v[1] for v in vals) / len(vals)})
+print(f"  MI-pooled point estimates ({len(imps)} imputations) done in "
+      f"{time.time()-t0:.0f}s")
+
+for b in range(1, B + 1):
+    imp = imps[rng.integers(len(imps))]
+    tl = ccw.load_timeline(imp, lookup, verbose=False)
+    idx = rng.integers(0, n, n)              # resample PATIENTS with replacement
+    tl = tl.iloc[idx].reset_index(drop=True)
     tl, Xpat = ccw.attach_patterns(tl, ccw.COVS)
     md, me, mc, ma = prep(tl)
     rr, rd = nested_rd(tl, Xpat)
@@ -113,9 +135,7 @@ for b in range(B + 1):                       # b=0 is the point estimate
     for M in MONTHS:
         rr, rd = seq_rd(tl, Xpat, M, md, me, mc, ma)
         recs.append({"b": b, "which": f"seq_M{M}", "rr": rr, "rd": rd})
-    if b == 0:
-        print(f"  point estimates done in {time.time()-t0:.0f}s")
-    elif b % 10 == 0 or b <= 2:
+    if b % 10 == 0 or b <= 2:
         el = time.time() - t0
         print(f"  replicate {b}/{B}  elapsed {el/60:.1f} min  "
               f"projected total {el/b*B/60:.0f} min", flush=True)
