@@ -32,7 +32,12 @@ BASE_DIR = _find_project_root()
 FINAL_DATA = BASE_DIR / "Data" / "Final_table_cleaned.csv"
 # Sensitivity variant (reviewer comment #6): when INCLUDE_INCOMPLETE_AS_LTFU=1
 # write to separate filenames so the primary cohort is never overwritten.
-_SUFFIX = "_incl_incomplete" if os.environ.get("INCLUDE_INCOMPLETE_AS_LTFU") == "1" else ""
+# Second sensitivity variant (Appendix 1.1): when IMPUTE_TX_START=1 the cases
+# with no recorded treatment start are KEPT, with best_start taken from the
+# diagnostic date and, failing that, the notification date.
+_SUFFIX = ("_incl_incomplete" if os.environ.get("INCLUDE_INCOMPLETE_AS_LTFU") == "1"
+           else "_impute_start" if os.environ.get("IMPUTE_TX_START") == "1"
+           else "")
 OUT_CSV = BASE_DIR / "ITT_Analysis" / "data" / f"itt_cohort{_SUFFIX}.csv"
 OUT_DOC = BASE_DIR / "ITT_Analysis" / "results" / f"Inclusion_Exclusion_ITT{_SUFFIX}.docx"
 OUT_FLOWCHART = BASE_DIR / "Data" / f"exclusion_flowchart{_SUFFIX}.csv"
@@ -77,6 +82,12 @@ diag_df = df[["sinan_clean", "diagnostic_date"]].dropna().groupby("sinan_clean")
 # primary filenames. When INCLUDE_INCOMPLETE_AS_LTFU=1, blanks/NA are retained
 # and labelled LTFU, and outputs are written to *_incl_incomplete filenames.
 INCLUDE_INCOMPLETE = os.environ.get("INCLUDE_INCOMPLETE_AS_LTFU") == "1"
+
+# Appendix 1.1 asks what happens if the cases without a recorded treatment start
+# are put back. They cannot be placed on the time-on-treatment axis as recorded,
+# so their start is imputed from the diagnostic date (notification date if that
+# is missing too). Default OFF; when off the cohort is byte-identical.
+IMPUTE_TX_START = os.environ.get("IMPUTE_TX_START") == "1"
 
 # For the LTFU group: First "Novo" episode ending in abandonment
 print("Selecting First Abandonment episodes (Novo)...")
@@ -142,11 +153,20 @@ attrition.append(("Exclude: Treatment end date outside 2013-2023", len(itt_cohor
 # tx_start (predominantly "Abandono Primario" — diagnosed but never recorded as
 # initiating therapy) are excluded from the primary cohort and held for a
 # sensitivity analysis (handled separately).
-itt_cohort = itt_cohort[itt_cohort["tx_start"].notna()]
-attrition.append(("Exclude: No recorded treatment start date (Abandono Primario)", len(itt_cohort)))
-
-# best_start = tx_start (now always non-missing for the primary cohort)
-itt_cohort["best_start"] = itt_cohort["tx_start"]
+if IMPUTE_TX_START:
+    _n_before = len(itt_cohort)
+    itt_cohort["best_start"] = (itt_cohort["tx_start"]
+                                .fillna(itt_cohort["diagnostic_date"])
+                                .fillna(itt_cohort["notification_date"]))
+    itt_cohort = itt_cohort[itt_cohort["best_start"].notna()]
+    _kept = (_n_before - itt_cohort["tx_start"].notna().sum())
+    print(f"  [IMPUTE_TX_START] retained {_kept:,} cases with imputed start date")
+    attrition.append(("Retained: treatment start imputed (sensitivity)", len(itt_cohort)))
+else:
+    itt_cohort = itt_cohort[itt_cohort["tx_start"].notna()]
+    attrition.append(("Exclude: No recorded treatment start date (Abandono Primario)", len(itt_cohort)))
+    # best_start = tx_start (now always non-missing for the primary cohort)
+    itt_cohort["best_start"] = itt_cohort["tx_start"]
 itt_cohort = itt_cohort.merge(dod_all[["sinan_clean", "death_date_comprehensive"]], on="sinan_clean", how="left")
 
 # Exclude candidates who died ON or BEFORE treatment start
@@ -156,7 +176,7 @@ itt_cohort = itt_cohort[~pre_tx_death]
 attrition.append(("Exclude: Death on or before treatment start", len(itt_cohort)))
 
 # Filter valid end dates
-invalid_mask = itt_cohort["end_date"] < itt_cohort["tx_start"]
+invalid_mask = itt_cohort["end_date"] < itt_cohort["best_start"]
 itt_cohort = itt_cohort[~invalid_mask]
 attrition.append(("Exclude: Invalid dates (end_date < tx_start)", len(itt_cohort)))
 
