@@ -44,8 +44,18 @@ suppressPackageStartupMessages({ library(splines) })
 }
 source(file.path(.here(), "_paths.R")); source(file.path(.here(), "_rolling.R"))
 
-REPORT_AT <- c(0.5, 1, 2)          # years from the trial origin
-SUBGRPS   <- c("age_group", "hiv_aids", "homelessness")
+# Horizons, years from the trial origin. Default unchanged; the appendix needs
+# the five-year figure, so it is configurable rather than edited in place.
+REPORT_AT <- as.numeric(strsplit(Sys.getenv("REPORT", unset = "0.5,1,2"), ",")[[1]])
+# COMPLETE_CASE=1 replaces the imputed inputs with the unimputed cohort
+# restricted to individuals complete on every adjustment covariate, matching the
+# restriction in 43b (geo4 is complete by construction and cannot exclude).
+COMPLETE_CASE <- nzchar(Sys.getenv("COMPLETE_CASE", unset = ""))
+OUT_SUFFIX    <- Sys.getenv("OUT_SUFFIX", unset = "")
+# SUBGRPS="" skips the subgroup pass, which is not estimable in the
+# complete-case restriction (some strata lose their exposed cases).
+SUBGRPS   <- Sys.getenv("SUBGRPS", unset = "age_group,hiv_aids,homelessness")
+SUBGRPS   <- if (nzchar(SUBGRPS)) strsplit(SUBGRPS, ",")[[1]] else character(0)
 
 # ---------------------------------------------------------------------------
 # Fit one pooled model and standardize to the exposed population
@@ -126,8 +136,27 @@ B <- as.integer(Sys.getenv("B", unset = 0))
 cat(sprintf("[45] standardized absolute risks | %d imputation(s) | bootstrap B=%d\n",
             length(imp_files), B))
 
-prepped <- lapply(imp_files, function(p)
-  prepare_rolling(p, outcome_lookup = outcome_lk, extra_factors = "dot_status"))
+if (COMPLETE_CASE) {
+  cc <- prepare_rolling(file.path(ITT_DATA_DIR, "itt_cohort.csv"),
+                        outcome_lookup = outcome_lk,
+                        extra_factors = "dot_status")
+  blank_to_na <- function(x) {
+    if (is.factor(x)) {
+      if (any(levels(x) == "")) levels(x)[levels(x) == ""] <- NA
+      return(x)
+    }
+    ifelse(!is.na(x) & trimws(as.character(x)) == "", NA, x)
+  }
+  CC_COVARS <- setdiff(COVARS, "geo4")
+  for (v in CC_COVARS) cc[[v]] <- blank_to_na(cc[[v]])
+  keep <- Reduce(`&`, lapply(CC_COVARS, function(v) !is.na(cc[[v]])))
+  cat(sprintf("  complete-case restriction: %d of %d individuals (%.1f%%)\n",
+              sum(keep), nrow(cc), 100 * mean(keep)))
+  prepped <- list(cc[keep, , drop = FALSE])
+} else {
+  prepped <- lapply(imp_files, function(p)
+    prepare_rolling(p, outcome_lookup = outcome_lk, extra_factors = "dot_status"))
+}
 stacks  <- lapply(prepped, build_rolling, comparator = "in_care")
 
 cat("\n--- overall, standardized to the disengaging population ---\n")
@@ -236,6 +265,8 @@ if (B > 0) {
   } else cat("  too few successful replicates for CIs\n")
 }
 
-write.csv(rows, file.path(ITT_RESULTS_DIR, "rolling_landmark_absolute.csv"),
+write.csv(rows, file.path(ITT_RESULTS_DIR,
+          paste0("rolling_landmark_absolute", OUT_SUFFIX, ".csv")),
           row.names = FALSE)
-cat(sprintf("\n[45] wrote %d rows to rolling_landmark_absolute.csv\n", nrow(rows)))
+cat(sprintf("\n[45] wrote %d rows to rolling_landmark_absolute%s.csv\n",
+            nrow(rows), OUT_SUFFIX))

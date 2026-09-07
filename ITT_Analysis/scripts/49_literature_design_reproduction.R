@@ -47,7 +47,11 @@
 source(file.path(.here(), "_paths.R"))
 source(file.path(.here(), "_rolling.R"))
 
-CAP        <- 2          # years of follow-up from each design's own origin
+# Horizon in years, from each design's own origin. Five years is the paper's
+# reporting horizon (owner decision 2026-08-21), so HORIZON_Y=5 is what the
+# manuscript quotes; the default stays 2 so nothing that expected the old
+# behaviour changes silently.
+CAP        <- as.numeric(Sys.getenv("HORIZON_Y", unset = "2"))
 EOT_DAY    <- 180        # end of the intended course, for design C
 CURED_CODE <- "Cura"
 
@@ -155,24 +159,44 @@ for (w in names(LABELS)) {
               format(rows[[length(rows)]]$n_events, big.mark = ",")))
 }
 
-# design D: our primary, read from the rolling output rather than refit
-rl <- file.path(ITT_RESULTS_DIR, "rolling_landmark.csv")
-if (file.exists(rl)) {
-  r <- read.csv(rl)
-  r <- r[r$comparator == "in_care" & r$model == "late", ]
+# design D: ours, read from the rolling output rather than refit.
+#
+# The OVERALL model, not the late window: the early/late split was removed from
+# the paper, so designs A-C (everything from their own origin) must be compared
+# against a D on the same footing.
+#
+# Horizon-specific source. rolling_landmark.csv is script 42's 2-year output and
+# is the source of record for the cross-script coherence check and several
+# registry rows -- it must not be regenerated at 5 years just to feed this
+# comparison. The 5-year overall estimate already exists in script 43b's output.
+if (CAP == 5) {
+  dsrc <- file.path(ITT_RESULTS_DIR, "rolling_landmark_cause_5y.csv")
+  dpick <- function(r) r[r$cause == "all_cause" & r$model == "overall" &
+                           r$cap == 5, ]
+  dnote <- "rolling_landmark_cause_5y.csv (script 43b)"
+} else {
+  dsrc <- file.path(ITT_RESULTS_DIR, "rolling_landmark.csv")
+  dpick <- function(r) r[r$comparator == "in_care" & r$model == "overall", ]
+  dnote <- "rolling_landmark.csv (script 42)"
+}
+if (file.exists(dsrc)) {
+  r <- dpick(read.csv(dsrc))
   if (nrow(r) == 1) {
     rows[[length(rows) + 1]] <- data.frame(
       design = "D", cap = CAP,
       description = "OURS: origin = patient's LTFU declaration date; comparator = still in care",
       aHR = r$HR, CI_L = r$CI_L, CI_H = r$CI_H, P_Value = r$P_Value,
       N_imp = r$N_imp, n_rows = NA_real_, n_events = NA_real_)
-    cat(sprintf("  D  aHR %5.2f (%.2f-%.2f)   <- ours, from rolling_landmark.csv\n",
-                r$HR, r$CI_L, r$CI_H))
+    cat(sprintf("  D  aHR %5.2f (%.2f-%.2f)   <- ours (overall model), from %s\n",
+                r$HR, r$CI_L, r$CI_H, dnote))
+  } else {
+    cat(sprintf("  D -- %d rows matched in %s; expected 1\n", nrow(r), dnote))
   }
-} else cat("  D -- rolling_landmark.csv absent; run script 42 first\n")
+} else cat(sprintf("  D -- %s absent\n", dnote))
 
 out <- bind_rows(rows)
-write.csv(out, file.path(ITT_RESULTS_DIR, "literature_design_reproduction.csv"),
+write.csv(out, file.path(ITT_RESULTS_DIR,
+                         sprintf("literature_design_reproduction_%gy.csv", CAP)),
           row.names = FALSE)
 cat(sprintf("\n[49] wrote %d rows to literature_design_reproduction.csv\n", nrow(out)))
 

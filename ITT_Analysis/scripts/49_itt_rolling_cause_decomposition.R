@@ -64,7 +64,10 @@ suppressPackageStartupMessages({ library(splines); library(dplyr) })
 source(file.path(.here(), "_paths.R"))
 source(file.path(.here(), "_rolling.R"))
 
-HORIZON <- 2                       # years from the trial origin
+# Years from the trial origin. The main text reports the five-year horizon
+# (owner decision 2026-08-21), so the ascertainment tables must be built at
+# HORIZON=5; the default is left at 2 so nothing else changes silently.
+HORIZON <- as.numeric(Sys.getenv("HORIZON", unset = "2"))
 B       <- as.integer(Sys.getenv("B", unset = "0"))
 
 # Causes to decompose. all_cause first: the per-cause risk differences should
@@ -243,6 +246,38 @@ print(as.data.frame(late |> count(arm, cause, cause_src, name = "n") |>
 
 write.csv(r4, file.path(ITT_RESULTS_DIR, "rolling_late_death_sources.csv"),
           row.names = FALSE)
+
+# --- the same table for ALL deaths, not only the late window ----------------
+# The manuscript no longer splits mortality into early and late windows, so the
+# ascertainment figures quoted to reviewer 4 have to cover every death within
+# the horizon. Same construction as `late` above, without the 0.5-year floor.
+allx <- s1[s1$event_d_num == 1 & s1$time_raw <= HORIZON, , drop = FALSE]
+allx$arm   <- ifelse(allx$expose == 1, "LTFU", "in care")
+allx$cause <- ifelse(allx$tb_hybrid, "TB",
+              ifelse(allx$nontb_hybrid, "non-TB", "unclassified"))
+allx$detection <- ifelse(allx$det_sim & allx$det_tbweb, "both",
+                  ifelse(allx$det_sim, "SIM only",
+                  ifelse(allx$det_tbweb, "TBweb only", "neither")))
+allx$cause_src <- ifelse(!allx$tb_hybrid & !allx$nontb_hybrid, "none",
+                  ifelse(allx$has_icd, "SIM ICD code", "TBweb outcome"))
+
+r4all <- allx |>
+  count(arm, cause, detection, cause_src, name = "n") |>
+  group_by(arm) |>
+  mutate(pct_of_arm = round(100 * n / sum(n), 1)) |>
+  ungroup() |>
+  arrange(arm, cause, detection)
+
+cat(sprintf("\n  R4.1 -- ALL deaths within %g y of the origin, n=%d:\n",
+            HORIZON, nrow(allx)))
+print(as.data.frame(allx |> count(arm, cause, detection, name = "n") |>
+                      tidyr::pivot_wider(names_from = detection,
+                                         values_from = n, values_fill = 0)),
+      row.names = FALSE)
+write.csv(r4all, file.path(ITT_RESULTS_DIR, "rolling_death_sources_all.csv"),
+          row.names = FALSE)
+cat(sprintf("  wrote %s\n",
+            file.path(ITT_RESULTS_DIR, "rolling_death_sources_all.csv")))
 cat(sprintf("\n  wrote %s\n",
             file.path(ITT_RESULTS_DIR, "rolling_late_death_sources.csv")))
 
