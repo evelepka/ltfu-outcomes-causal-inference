@@ -15,6 +15,59 @@ Variables imputed (must match 03_itt_multiple_imputation_models.R):
     event/time  — fg_status, fg_time, event_d, time_d
 
 Reference levels and NA-string handling mirror the R script.
+
+2026-08-31 — added `tx_year`, the CALENDAR YEAR of treatment start, as a
+categorical predictor in the imputation models. Calendar year is the strongest
+single predictor of missingness in the cohort: race_clean is unrecorded for
+10.6% of 2014 treatment starts, rising monotonically to 31.1% of 2023 starts
+(edu_clean 23.7% -> 32.6%), a steeper gradient than for any patient
+characteristic. The imputation model previously omitted it, so the
+missing-at-random assumption was conditional on a set that left out the
+dominant driver of the mechanism; conditioning on year brings the imputation
+model closer to the plausible MAR set. Note this is about the IMPUTATION model
+only — calendar year is a negligible CONFOUNDER of the exposure-mortality
+association (adjusting for it moves the estimate by ~0.3%), so it is
+deliberately NOT added to the analysis models.
+
+Categorical (one level per year, 2013-2023) rather than a linear or spline
+term, because the gradient is a recording-practice step change concentrated in
+the last two years, not a smooth trend. `best_start` is fully observed
+(0 unparseable of 171,048), so tx_year is a pure predictor and is never itself
+imputed. It is carried into the output CSVs as a new column; nothing is
+dropped, and downstream scripts select by name.
+
+2026-08-31 (same day, second pass) — added two AUXILIARY predictors alongside
+tx_year, at the owner's direction:
+
+  * `mental_health` — the second-strongest predictor of EDUCATION missingness:
+    edu_clean is unrecorded for 40.9% of the 2,622 patients with a recorded
+    mental health condition against 26.9% of the 168,426 without. Fully
+    observed (0 missing), so a pure predictor.
+  * `dx_setting_aux` — diagnosis setting, which the manuscript already asserted
+    was in the imputation model when it was not. Edu missingness runs from
+    20.2% (active finding in the community) to 31.8% (emergency/inpatient).
+
+Both are AUXILIARY: they are NOT among the 13 adjustment covariates and must
+NOT be added to the analysis models. A variable can sharpen an imputation model
+without belonging in the substantive adjustment set. edu_clean carries the
+largest missingness in the study (27.1%), so its predictors matter most.
+
+WHY `dx_setting_aux` AND NOT `diagnosis_setting` DIRECTLY. Contrary to the
+brief, diagnosis_setting is NOT fully recorded: 4,178 patients (2.44%) have no
+setting. Putting the raw column into the imputation frame would have made
+miceforest impute it, silently turning a 4-variable imputation into a
+5-variable one and handing downstream code a diagnosis_setting with no
+missingness — several scripts (02_make_itt_table1.py, 60_make_manuscript.py,
+55c_landmark_smd_psweighted.py) do `.fillna("Missing")` on it and would have
+lost that category. So the auxiliary copy carries the missing rows as an
+explicit "Unrecorded" level and the raw `diagnosis_setting` column passes
+through untouched. This keeps the variable a pure predictor, as intended, and
+the unrecorded group is itself the most informative level (37.9% edu
+missingness, higher than any recorded setting) rather than something to fill in.
+
+Net effect on the frame: three predictors added (tx_year, mental_health,
+dx_setting_aux); the set of variables actually IMPUTED is unchanged at four
+(race_clean 13.25%, edu_clean 27.06%, dot_status 6.97%, clinical_clean 1 row).
 """
 
 import os
@@ -98,6 +151,41 @@ df["age_group"] = pd.cut(
     labels=["15-24", "25-44", "45-64", "≥65"],
 )
 
+# Calendar year of treatment start (2026-08-31). One level per year, NOT a
+# linear term — the missingness gradient is a recording-practice step change,
+# not a smooth trend. `best_start` is complete, so this must not introduce any
+# missingness of its own; assert that rather than trusting it.
+_start = pd.to_datetime(df["best_start"], errors="coerce")
+if _start.isna().any():
+    raise ValueError(
+        f"best_start unparseable for {int(_start.isna().sum())} rows; tx_year "
+        f"would enter the imputation frame with missingness of its own"
+    )
+df["tx_year"] = _start.dt.year.astype(int).astype(str)
+
+# Auxiliary predictor: diagnosis setting with its 4,178 unrecorded patients
+# (2.44%) held as an explicit level. A separate column so the raw
+# `diagnosis_setting` still passes through with its NAs intact — downstream code
+# labels those "Missing" and must keep being able to. See the docstring.
+df["dx_setting_aux"] = (
+    df["diagnosis_setting"]
+    .apply(lambda x: np.nan if pd.isna(x) or str(x) in NA_STRINGS else x)
+    .fillna("Unrecorded")
+    .astype(str)
+)
+
+# `mental_health` needs no derivation, but it must be fully observed to stay a
+# pure predictor rather than becoming a fifth imputed variable.
+_mh = df["mental_health"].apply(
+    lambda x: np.nan if pd.isna(x) or str(x) in NA_STRINGS else x)
+if _mh.isna().any():
+    raise ValueError(
+        f"mental_health missing for {int(_mh.isna().sum())} rows; it was added "
+        f"as an AUXILIARY predictor on the stated basis that it is fully "
+        f"recorded, so handle its missingness explicitly rather than letting "
+        f"miceforest impute it"
+    )
+
 # ---------------------------------------------------------------------------
 # Build the MI frame with correct dtypes. miceforest infers by dtype:
 #   category -> categorical imputation; float -> numeric imputation.
@@ -106,6 +194,17 @@ CATEGORICAL = [
     "age_group", "sex", "race_clean", "edu_clean", "hiv_aids", "diabetes",
     "alcohol", "drug_use", "incarcerated", "homelessness", "hosp_admission",
     "clinical_clean", "dot_status", "tx_month_grp",
+    # calendar year of treatment start (2026-08-31) — fully observed, included
+    # as a predictor because it is the dominant driver of the missingness
+    # mechanism for race_clean and edu_clean. `tx_month_grp` above is the month
+    # of THERAPY (duration on treatment), which carries no calendar-time
+    # information, so year was genuinely absent from the model before this.
+    "tx_year",
+    # auxiliary predictors (2026-08-31) — fully observed, in the model only to
+    # sharpen the conditional distribution of edu_clean, which carries the
+    # largest missingness in the study. NOT adjustment covariates: do not add
+    # them to the analysis models in the downstream R scripts.
+    "mental_health", "dx_setting_aux",
     # exposure — not missing, but included as a predictor in the imputation
     # models so that LTFU vs Non-LTFU heterogeneity informs conditional
     # distributions for the imputed variables.
