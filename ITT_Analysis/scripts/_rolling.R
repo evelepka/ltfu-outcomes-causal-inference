@@ -94,7 +94,17 @@ build_cause_lookup <- function(verbose = TRUE) {
   # `Banco de dados/LINKAGE SIM (1).xlsx`; 47b_build_tb_anyline_flag.py distils
   # it. Adds ~23% more tuberculosis deaths, sitting mostly under HIV, COPD and
   # lung cancer, i.e. exactly the deaths held out of both classes as ambiguous.
-  # Sensitivity analysis only. Leave OFF for anything the manuscript reports.
+  # SECONDARY ANALYSIS. Superseded 2026-08-31: the owner promoted this to the
+  # main text as a labelled secondary analysis (Methods 67, Results 138,
+  # Discussion 151, appendix section 3.4), because Discussion 151 already
+  # asserted that the 61% tuberculosis share is a lower bound BECAUSE
+  # contributing mentions are not counted -- and this measures it: 26% more
+  # deaths classified, share 61% -> 63%, risk ratio 2.37 -> 2.26 because the
+  # extra deaths fall in both arms.
+  #
+  # It is still NOT the primary rule. Leave OFF by default: every headline
+  # number, and every row of rolling_cause_cif.csv, is the underlying cause.
+  # When running it, always set OUT_SUFFIX so the primary outputs survive.
   if (nzchar(Sys.getenv("TB_ANY_LINE"))) {
     fl <- file.path(DATA_DIR, "tb_any_line_flag.csv")
     if (!file.exists(fl)) stop("TB_ANY_LINE=1 but ", fl, " is missing; run 47b first")
@@ -260,8 +270,15 @@ prepare_rolling <- function(path, cause_lookup = NULL, extra_factors = NULL,
   } else {
     d$primary_aband <- rep(FALSE, nrow(d))
   }
-  d$dis_d <- ifelse(d$is_ltfu & !d$primary_aband,
-                    pmax(d$dis_d_raw, DAY_MIN), d$dis_d_raw)
+  # NO FLOOR (owner decision 2026-08-24). dis_d is the inferred disengagement day
+  # and the timing analysis is indexed on months of therapy received, so a day of
+  # <= 0 has no position on that axis. Leaving it negative lets the day-grid filter
+  # below (dis_d >= dmin) drop these patients, and keeps origin_y anchored on the
+  # real declaration date rather than on a floored one. Flooring to DAY_MIN both
+  # asserted a timing the dates do not support and pushed the origin past the
+  # actual declaration, reintroducing a few days of immortal time. Do not restore
+  # the pmax(): the CCW keeps these patients on purpose, this design cannot.
+  d$dis_d <- d$dis_d_raw
   # when does this patient stop being "in care"?
   d$care_end_d <- ifelse(d$is_ltfu, pmax(d$dis_d_raw, 0), d$tx_end_d)
   d$fu_y <- d$time_d_tx
@@ -313,8 +330,8 @@ build_rolling <- function(d, comparator = c("in_care", "alive_only"),
   # Identical origins, so the ESTIMATE is convention-invariant; only the
   # x-axis value (how much therapy the patient received) differs by 30 days.
   if (defn == "defnA") {
-    d$dis_d <- ifelse(d$is_ltfu & !d$primary_aband,
-                      pmax(d$tx_end_d, DAY_MIN + GRACE_D), d$dis_d)
+    # same rule as defnB above: no floor, so the day grid excludes them
+    d$dis_d <- ifelse(d$is_ltfu & !d$primary_aband, d$tx_end_d, d$dis_d)
     grace <- 0; dmin <- DAY_MIN + GRACE_D; dmax <- DAY_MAX + GRACE_D
   } else {
     grace <- GRACE_D; dmin <- DAY_MIN; dmax <- DAY_MAX
