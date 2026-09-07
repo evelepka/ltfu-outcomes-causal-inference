@@ -33,10 +33,13 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--min-reps", type=int, default=20,
                     help="refuse to write an interval from fewer than this")
+    ap.add_argument("--suffix", default="",
+                    help="OUT_SUFFIX used by the 46d run, e.g. _SIMONLY")
     args = ap.parse_args()
 
-    res = Path(ITT_RESULTS_DIR) / "rolling_cause_cif.csv"
-    drw = Path(ITT_RESULTS_DIR) / "rolling_cause_cif_draws.csv"
+    sfx = args.suffix
+    res = Path(ITT_RESULTS_DIR) / f"rolling_cause_cif{sfx}.csv"
+    drw = Path(ITT_RESULTS_DIR) / f"rolling_cause_cif_draws{sfx}.csv"
     for f in (res, drw):
         if not f.exists():
             sys.exit(f"missing {f} -- has 46d run?")
@@ -60,8 +63,10 @@ def main() -> int:
     out = pt.merge(ci, on=KEYS, how="left")
     out["boot_status"] = f"partial_{n_reps}_of_180"
 
-    dst = Path(ITT_RESULTS_DIR) / "rolling_cause_cif_boot_partial.csv"
-    out.to_csv(dst, index=False)                        # write before printing
+    dst = Path(ITT_RESULTS_DIR) / f"rolling_cause_cif_boot_partial{sfx}.csv"
+    # na_rep="NA" so the pooled overall rows carry the same literal "NA" in
+    # dmon as the R-written 46d files, which the registry locators match on.
+    out.to_csv(dst, index=False, na_rep="NA")            # write before printing
     print(f"wrote {dst}")
 
     for hz in sorted(out.time_y.unique()):

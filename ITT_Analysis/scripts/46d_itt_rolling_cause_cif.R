@@ -96,6 +96,17 @@ NGRID   <- 400                                          # time grid for the inte
 CAUSES  <- c("tb", "nontb", "unclass")
 BYMONTH <- nzchar(Sys.getenv("BYMONTH", unset = "1"))   # also do months 1-6
 
+# OUT_SUFFIX (2026-08-31). Appended to every output filename. Default "" leaves
+# the names exactly as they were. It exists so a MATCHED PAIR of runs -- the
+# same cohort and the same imputations, differing only in TB_ANY_LINE -- can be
+# written side by side without either clobbering rolling_cause_cif.csv. The
+# earlier pair (rolling_cause_cif_PRIMARY_underlying.csv / ..._TBANYLINE_
+# sensitivity.csv) was produced by renaming files after the fact, which is how
+# it ended up matched to each other but to a superseded run: the pair reports a
+# 2.6225 pp total excess where the live file has 2.6789. Having the generator
+# name its own outputs removes that failure mode. Never compare across runs.
+OUT_SUFFIX <- Sys.getenv("OUT_SUFFIX", unset = "")
+
 # Follow-up periods for the exposure effect. Identical to 45b's CUTS -- if these
 # two ever diverge the scripts stop estimating the same thing again.
 CUTS  <- c(0.5, 1, 2, 3)         # -> periods (0,.5] (.5,1] (1,2] (2,3] (3,5]
@@ -296,7 +307,15 @@ cat(sprintf("[46d] cause-specific CIF (Aalen-Johansen) | %d imputation(s) | hori
 
 lookup     <- build_cause_lookup()
 outcome_lk <- build_outcome_lookup()
-CARRY <- c("tb_hybrid", "nontb_hybrid")
+# CAUSE_RULE=simonly restricts cause attribution to death-certificate ICD codes
+# only, dropping the TBweb programmatic outcome that the hybrid rule falls back
+# on. Used for the appendix death-certificate-only sensitivity, which previously
+# existed only as hazard ratios.
+CAUSE_RULE <- Sys.getenv("CAUSE_RULE", unset = "hybrid")
+TBCOL    <- if (CAUSE_RULE == "simonly") "tb_simonly"    else "tb_hybrid"
+NONTBCOL <- if (CAUSE_RULE == "simonly") "nontb_simonly" else "nontb_hybrid"
+cat(sprintf("  cause rule: %s (%s / %s)\n", CAUSE_RULE, TBCOL, NONTBCOL))
+CARRY <- c(TBCOL, NONTBCOL)
 
 prepped <- lapply(imp_files, prepare_rolling, cause_lookup = lookup,
                   outcome_lookup = outcome_lk)
@@ -306,9 +325,9 @@ stacks  <- lapply(prepped, build_rolling, comparator = "in_care", carry = CARRY)
 for (i in seq_along(stacks)) {
   s <- stacks[[i]]
   died <- s$event_d_num == 1
-  s$ev_tb      <- died &  s$tb_hybrid
-  s$ev_nontb   <- died & !s$tb_hybrid &  s$nontb_hybrid
-  s$ev_unclass <- died & !s$tb_hybrid & !s$nontb_hybrid
+  s$ev_tb      <- died &  s[[TBCOL]]
+  s$ev_nontb   <- died & !s[[TBCOL]] &  s[[NONTBCOL]]
+  s$ev_unclass <- died & !s[[TBCOL]] & !s[[NONTBCOL]]
   stacks[[i]] <- s
 }
 s1 <- stacks[[1]]
@@ -367,7 +386,8 @@ if (BYMONTH) {
   res <- bind_rows(ov, bym)
 }
 
-out <- file.path(ITT_RESULTS_DIR, "rolling_cause_cif.csv")
+out <- file.path(ITT_RESULTS_DIR,
+                 sprintf("rolling_cause_cif%s.csv", OUT_SUFFIX))
 write.csv(res, out, row.names = FALSE)
 cat(sprintf("\n[46d] wrote %s\n", out))
 
@@ -385,7 +405,8 @@ cat(sprintf("\n[46d] wrote %s\n", out))
 # ---------------------------------------------------------------------------
 B <- as.integer(Sys.getenv("B", unset = "0"))
 if (B > 0) {
-  draws_path <- file.path(ITT_RESULTS_DIR, "rolling_cause_cif_draws.csv")
+  draws_path <- file.path(ITT_RESULTS_DIR,
+                          sprintf("rolling_cause_cif_draws%s.csv", OUT_SUFFIX))
   cat(sprintf("\n=== cluster bootstrap, B=%d ===\n", B))
   cat(sprintf("  draws appended to %s after every replicate\n", basename(draws_path)))
   BOOT_BYMONTH <- nzchar(Sys.getenv("BOOT_BYMONTH", unset = ""))
@@ -400,9 +421,9 @@ if (B > 0) {
 
   add_ev <- function(s) {
     died <- s$event_d_num == 1
-    s$ev_tb      <- died &  s$tb_hybrid
-    s$ev_nontb   <- died & !s$tb_hybrid &  s$nontb_hybrid
-    s$ev_unclass <- died & !s$tb_hybrid & !s$nontb_hybrid
+    s$ev_tb      <- died &  s[[TBCOL]]
+    s$ev_nontb   <- died & !s[[TBCOL]] &  s[[NONTBCOL]]
+    s$ev_unclass <- died & !s[[TBCOL]] & !s[[NONTBCOL]]
     s
   }
 
@@ -447,7 +468,8 @@ if (B > 0) {
                 rr_hi = quantile(rr, .975, na.rm = TRUE),
                 n_reps = sum(!is.na(rd)), .groups = "drop")
     res2 <- left_join(res, ci, by = c("dmon", "cause", "time_y"))
-    outb <- file.path(ITT_RESULTS_DIR, "rolling_cause_cif_boot.csv")
+    outb <- file.path(ITT_RESULTS_DIR,
+                      sprintf("rolling_cause_cif_boot%s.csv", OUT_SUFFIX))
     write.csv(res2, outb, row.names = FALSE)      # write BEFORE printing
     cat(sprintf("\n[46d] wrote %s  (%d replicates completed of %d requested)\n",
                 outb, n_ok, B))
