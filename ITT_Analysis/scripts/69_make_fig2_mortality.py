@@ -85,6 +85,27 @@ ALC  = strat("alcohol", [("Yes", "Alcohol use"), ("No", "No alcohol use")])
 for nm, dd in [("HIV", HIV), ("HOSP", HOSP), ("HOUS", HOUS), ("AGE", AGE), ("ALC", ALC)]:
     print(nm, [(l, round(v, 1), n) for l, v, n in dd])
 
+# Emit the panel values, not just the picture. These are the numbers the Results
+# text quotes, and until now they existed only inside the PNG -- so the prose had
+# no source that could be re-run or checked (CLAUDE.md invariant 8). Panel A is
+# included so a per-month timing figure can be quoted against the same curves the
+# figure draws, rather than against a different set of bins.
+_rows = []
+for nm, dd in [("hiv_aids", HIV), ("hosp_admission", HOSP),
+               ("homelessness", HOUS), ("age_group", AGE), ("alcohol", ALC)]:
+    for lab, val, n in dd:
+        _rows.append({"panel": "B-F", "stratum": nm, "level": lab,
+                      "horizon_m": HZ_M, "cum_mortality_pct": val, "n": n})
+for m, lab in B_bins:
+    sub = ltfu[ltfu.dmonth == m]
+    _rows.append({"panel": "A", "stratum": "disengagement_month", "level": lab,
+                  "horizon_m": HZ_M,
+                  "cum_mortality_pct": km_risk(sub.time_d, sub.event_d) * 100,
+                  "n": int(len(sub))})
+_out = os.path.join(ROOT, f"ITT_Analysis/results/fig3_descriptive_mortality_{HZ_M}mo.csv")
+pd.DataFrame(_rows).to_csv(_out, index=False)
+print("wrote", _out)
+
 def barpanel(ax, dat, title):
     labs=[l for l,_,_ in dat]; vals=[v for _,v,_ in dat]; ns=[n for _,_,n in dat]
     cols = plt.cm.OrRd(np.linspace(0.45, 0.9, len(dat)))

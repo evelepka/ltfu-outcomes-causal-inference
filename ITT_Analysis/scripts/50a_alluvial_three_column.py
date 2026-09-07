@@ -204,6 +204,24 @@ for _, row in retreated.iterrows():
     node_size[(2, row["col2"])] += 1
     flows[((1, "Retreatment"), (2, row["col2"]))] += 1
 
+# Save the distribution, not just print it. These are Figure 2D's numbers, and
+# the Results text needs to be able to cite a source that can be re-run rather
+# than a figure image (CLAUDE.md invariant 8). Note the two death counts here do
+# NOT sum to the 1,668 post-LTFU deaths: deaths after a retreatment episode
+# closed, and deaths among those with no further notification, are ascertained by
+# SIM linkage and are not branches of this diagram.
+_rows = []
+for lab, n in ltfu["col1"].value_counts().items():
+    _rows.append({"column": "after LTFU", "level": lab, "n": int(n),
+                  "pct": 100 * n / len(ltfu), "denominator": len(ltfu)})
+_retx = retreated["col2"].dropna()
+for lab, n in _retx.value_counts().items():
+    _rows.append({"column": "retreatment outcome", "level": lab, "n": int(n),
+                  "pct": 100 * n / len(_retx), "denominator": len(_retx)})
+_p = BASE / "ITT_Analysis" / "results" / "ltfu_trajectory_distribution.csv"
+pd.DataFrame(_rows).to_csv(_p, index=False)
+print("Wrote", _p)
+
 X_POSITIONS = {0: 0.02, 1: 0.50, 2: 0.97}
 
 # Derive explicit y-positions within each column by stacking proportionally to

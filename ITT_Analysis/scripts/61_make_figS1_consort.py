@@ -7,7 +7,17 @@ Design goals (per reviewer feedback):
   * boxes sized snugly to their content (no large empty margins inside boxes).
 
 Numbers are hard-coded and verified to add up at each step.
+
+2026-08-31: the final box read N = 171,069, twenty-one more than the cohort the
+paper reports, because the flow omitted the "identified only post-mortem"
+exclusion that appendix 1.2 lists. That step is now in the last exclusion box and
+the total reads 171,048, matching the manuscript. The output path was also
+absolute and pointed at the pre-rename "Abandonment Paper" tree, so the script
+could not write its own figure; it now resolves the repository root from its own
+location, as scripts 47 and 48 do.
 """
+from pathlib import Path
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -33,7 +43,7 @@ flow = [
     ("First TB episode, eligible record", "N = 200,300"),
     ("Resident, adult, with consistent data", "N = 190,087"),
     ("Primary cohort: treatment within study\nperiod and with recorded start date",
-     "N = 171,069"),
+     "N = 171,048"),
 ]
 
 # Exclusion boxes sit in the gap between successive flow boxes.
@@ -49,7 +59,8 @@ excl = [
      "Pre-treatment deaths, n = 2,063"],
     ["Excluded:",
      "End dates outside 2013 to 2023, n = 17,624",
-     "No recorded treatment start date, n = 1,394"],
+     "No recorded treatment start date, n = 1,394",
+     "Identified only post-mortem, n = 21"],
 ]
 
 # ---- geometry (all in inches) ----------------------------------------------
@@ -142,6 +153,7 @@ for i, items in enumerate(excl):
                  color=ARROW_C, shrinkA=0, shrinkB=0))
 
 plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
-out = "/Users/jasonandrews/Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/.shortcut-targets-by-id/18HafZqxrHeLVzpA6oYW-1cro9ygNfwVd/Abandonment Paper/ITT_Analysis/results/Figure_S1_consort.png"
+ROOT = Path(__file__).resolve().parents[2]
+out = str(ROOT / "ITT_Analysis" / "results" / "Figure_S1_consort.png")
 fig.savefig(out, dpi=300, facecolor="white", bbox_inches="tight", pad_inches=0.10)
 print("wrote", out)
