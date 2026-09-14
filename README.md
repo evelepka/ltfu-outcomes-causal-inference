@@ -25,7 +25,6 @@ The headline analysis is a **sequential target-trial emulation** with a symmetri
 outcomes-after-tb-abandonment/
 ├── README.md                  (this file)
 ├── COHORT_SELECTION.md        cohort definition and inclusion/exclusion details
-├── CLAUDE.md                  agent / collaborator guidance
 ├── .gitignore                 excludes data/, results/, and manuscript drafts
 ├── figures/
 │   ├── Figure_1_descriptive.{png,pdf}        post-LTFU trajectories
