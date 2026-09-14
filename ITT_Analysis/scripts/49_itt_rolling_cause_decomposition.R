@@ -44,7 +44,7 @@
 #
 # The external-cause flag is derived HERE rather than in build_cause_lookup(),
 # deliberately: editing `_rolling.R` obligates re-running 42, 43, 45 and 46
-# (CLAUDE.md invariant 3), and this is an additive derived column, not a change
+# and this is an additive derived column, not a change
 # to shared logic. If external cause becomes a reported analysis, move it into
 # build_cause_lookup() and re-run the family.
 #

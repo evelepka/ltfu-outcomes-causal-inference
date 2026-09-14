@@ -160,7 +160,8 @@ _panel_label(axB, "B", "Clone-censor-weight: absolute effect")
 plt.setp(axB.get_yticklabels(), visible=False)
 
 # The grey-interval sentence is gone with the grey. The two-clocks caveat is NOT
-# optional -- CLAUDE.md forbids reading a landmark window against a CCW horizon --
+# optional: the two designs use different time origins, so a landmark window
+# must never be read against a CCW horizon --
 # so it is kept, repointed at panel C.
 fig.text(0.5, -0.02,
          "Panels A and B are measured from treatment start; panel C from each patient's "

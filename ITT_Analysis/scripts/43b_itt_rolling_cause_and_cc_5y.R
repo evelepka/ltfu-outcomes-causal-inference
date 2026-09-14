@@ -12,7 +12,7 @@
 # cohort. That was provable rather than suspected -- their all_cause early value
 # was 0.889828408587957, digit for digit the value script 44 produced BEFORE the
 # 2026-08-24 cohort change, against 0.916363669070408 after it. This script
-# closes that hole (CLAUDE.md invariant 8: a reported number needs a source that
+# closes that hole: a reported number needs a source that
 # can be re-run).
 #
 # Script 43 cannot do the job: its cap comes from HORIZON_Y, which defaults to 2,

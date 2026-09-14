@@ -206,7 +206,7 @@ for _, row in retreated.iterrows():
 
 # Save the distribution, not just print it. These are Figure 2D's numbers, and
 # the Results text needs to be able to cite a source that can be re-run rather
-# than a figure image (CLAUDE.md invariant 8). Note the two death counts here do
+# than a figure image. Note the two death counts here do
 # NOT sum to the 1,668 post-LTFU deaths: deaths after a retreatment episode
 # closed, and deaths among those with no further notification, are ascertained by
 # SIM linkage and are not branches of this diagram.

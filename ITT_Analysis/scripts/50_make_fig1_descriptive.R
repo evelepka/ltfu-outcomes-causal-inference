@@ -29,8 +29,8 @@ suppressPackageStartupMessages({
   getwd()
 }
 source(file.path(.here(), "_paths.R"))
-# build_cause_lookup() is canonical (see .claude/rules/analysis-conventions.md);
-# do not re-derive the cause classes here. Needed because panels B and C now
+# build_cause_lookup() in _rolling.R is canonical: do not re-derive the cause
+# classes here, or the two definitions will drift. Needed because panels B and C now
 # split deaths into tuberculosis and non-tuberculosis.
 source(file.path(.here(), "_rolling.R"))
 

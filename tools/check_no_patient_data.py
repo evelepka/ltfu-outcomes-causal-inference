@@ -23,10 +23,10 @@ MAX_NONFIG_BYTES = 2_000_000
 
 
 # ---------------------------------------------------------------------------
-# The CLAUDE.md in THIS repo is the public one: repo layout and the
-# data-never-here rule. The project's working CLAUDE.md lives in Google Drive and
-# carries the journal submission ID, reviewer state and unpublished estimates.
-# Copying the private one over this one would publish all of that, so fail loudly.
+# The project's working notes carry the journal submission identifier, reviewer
+# state and unpublished effect estimates. This repository is PUBLIC, so any
+# tracked markdown that picks those up is a leak. Scan every tracked .md rather
+# than a single filename: the leak is the content, not the file it lands in.
 # ---------------------------------------------------------------------------
 PRIVATE_MARKERS = [
     (r"PMEDICINE-D-\d", "journal submission identifier"),
@@ -37,17 +37,20 @@ PRIVATE_MARKERS = [
 ]
 
 
-def check_public_claude_md():
-    p = ROOT / "CLAUDE.md"
-    if not p.exists():
-        return []
-    t = p.read_text(errors="replace")
+def check_private_markers(files):
     out = []
-    for pat, why in PRIVATE_MARKERS:
-        m = re.search(pat, t)
-        if m:
-            out.append(f"CLAUDE.md contains {why} ({m.group(0)!r}). This file is "
-                       f"PUBLIC. The working CLAUDE.md belongs in Google Drive only.")
+    for f in files:
+        if not f.endswith(".md"):
+            continue
+        fp = ROOT / f
+        if not fp.exists():
+            continue
+        t = fp.read_text(errors="replace")
+        for pat, why in PRIVATE_MARKERS:
+            m = re.search(pat, t)
+            if m:
+                out.append(f"{f} contains {why} ({m.group(0)!r}). "
+                           f"This repository is public.")
     return out
 
 
@@ -78,7 +81,7 @@ def main():
         if rows > MAX_CSV_ROWS:
             fails.append(f"{f} has {rows:,} rows (>{MAX_CSV_ROWS}); "
                          f"aggregate tables only")
-    fails.extend(check_public_claude_md())
+    fails.extend(check_private_markers(files))
     print(f"check_no_patient_data: {len(files):,} tracked files")
     for x in fails:
         print(f"  FAIL  {x}")

@@ -654,7 +654,7 @@ def bootstrap(timelines, xpats, jobs, B, seed, rubin=False):
 # Provenance
 # ---------------------------------------------------------------------------
 # mtime is meaningless in this tree -- Google Drive sync rewrites it on files
-# nobody touched (CLAUDE.md invariant 3). So the ONLY reliable staleness signal
+# nobody touched. So the ONLY reliable staleness signal
 # is content. On 2026-08-18 `rolling_landmark_cause.csv` was found reporting a
 # pre-primary-abandonment cohort after sitting stale for two days, because
 # nothing recorded what had produced it. These hashes make the same failure

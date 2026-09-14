@@ -87,7 +87,7 @@ for nm, dd in [("HIV", HIV), ("HOSP", HOSP), ("HOUS", HOUS), ("AGE", AGE), ("ALC
 
 # Emit the panel values, not just the picture. These are the numbers the Results
 # text quotes, and until now they existed only inside the PNG -- so the prose had
-# no source that could be re-run or checked (CLAUDE.md invariant 8). Panel A is
+# no source that could be re-run or checked. Panel A is
 # included so a per-month timing figure can be quoted against the same curves the
 # figure draws, rather than against a different set of bins.
 _rows = []
