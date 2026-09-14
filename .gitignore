@@ -35,9 +35,7 @@ __pycache__/
 # Project working notes stay in Google Drive, not in this repo.
 # ---------------------------------------------------------------------------
 docs/
-CLAUDE.md
 check.sh
-.claude/
 tools/*
 !tools/check_no_patient_data.py
 # 48_make_literature_docx.py stays in Google Drive: it hardcodes the manuscript's
@@ -54,5 +52,3 @@ ITT_Analysis/scripts/73_make_fig4_revised.py
 # Agent tooling: per-user permission grants, and agent worktrees (which are full
 # embedded repo copies). Note gitignore has no trailing comments — a pattern with
 # a comment appended to the same line matches nothing.
-.claude/settings.local.json
-.claude/worktrees/

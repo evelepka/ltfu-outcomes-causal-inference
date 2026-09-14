@@ -27,7 +27,8 @@ B.set_horizon(HORIZON)
 
 # ccw_v3 globs MI_DIR for imp_*.csv, so each cohort is presented as a
 # one-file directory of symlinks in a temp dir. Nothing is copied and no new
-# cohort CSV is written -- invariant 2 in CLAUDE.md.
+# cohort CSV is written: the project keeps one cohort file and never caches a
+# subset to disk.
 DATA = Path(C.ROOT) / "ITT_Analysis" / "data"
 COHORTS = [("primary", DATA / "itt_cohort.csv"),
            ("with imputed start", DATA / "itt_cohort_impute_start.csv")]
