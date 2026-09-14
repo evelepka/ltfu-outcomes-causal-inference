@@ -1,23 +1,23 @@
-# Outcomes After TB Treatment Loss to Follow-Up
+# Outcomes After TB treatment loss to follow-Up
 
 Causal-inference analysis of mortality after tuberculosis treatment loss to follow-up (LTFU) in São Paulo State, Brazil (2013–2023), linking the state TB surveillance system (TBweb) with the national death registry (SIM).
 
-The headline analysis is a **sequential target-trial emulation** with a symmetric 30-day grace-period landmark, comparing patients who became LTFU at each month of therapy with concurrent on-treatment controls under aligned time at risk.
+The headline analysis is a sequential target-trial emulation with a symmetric 30-day grace-period landmark, comparing patients who became LTFU at each month of therapy with concurrent on-treatment controls under aligned time at risk.
 
 ## Cohort
 
-- **N = 171,048** individuals initiating tuberculosis therapy (2013–2023; first episode; recorded treatment start required).
-- **20,830 (12.2%)** experienced loss to follow-up during the index treatment.
-- **150,218** had alternative outcomes (cure, on-treatment death, treatment failure, regimen change).
+- N = 171,048 individuals initiating tuberculosis therapy (2013–2023; first episode; recorded treatment start required).
+- 20,830 (12.2%) experienced loss to follow-up during the index treatment.
+- 150,218 had alternative outcomes (cure, on-treatment death, treatment failure, regimen change).
 - Median post-LTFU follow-up: 5.0 years (IQR 2.5–8.0).
 
 ## Key results
 
-- **Late-mortality penalty of LTFU is causal and persistent across months of treatment.** Sequential target-trial adjusted hazard ratios for late mortality (6–24 months post-landmark) range from **1.83 (95% CI 1.27–2.63)** at month 6 to **2.85 (2.33–3.48)** at month 3.
-- **The excess is TB-specific.** Cause-specific HRs for TB-attributable death are 1.61–4.36 across months 1–6; non-TB death HRs are essentially null (0.96–1.48). This negative-control contrast supports a causal effect of interrupted TB therapy rather than residual selection.
-- **The mortality surrounding return to care is largely attributable to the antecedent disengagement, not to re-entry.** In a risk-set (incidence-density) matched analysis anchored at the time of return, patients who returned had markedly higher 24-month mortality than matched still-LTFU patients (HR 6.93, 95% CI 5.95–8.08) — an association reflecting confounding by indication, since return is typically prompted by recurrent or progressive disease. A g-computation counterfactual estimated that returning patients, whose observed 24-month mortality was 9.3%, would have experienced only 3.5% had they instead completed treatment — indicating the excess is driven by the disengagement itself. Within-LTFU IPCW and Bayesian-Cox analyses (appendix) give the same qualitative conclusion.
-- **Early-window aHRs sit at or below unity** (range 0.63–1.16 across months 1–6) and reflect residual survival/selection biases that the target-trial design cannot fully eliminate, not a protective effect of disengagement.
-- **Effect modification:** relative penalty is largest in younger and stably housed individuals (where competing-mortality baseline is low) and smallest in homeless individuals and people aged ≥65 (where baseline mortality is already high).
+- Late-mortality penalty of LTFU is causal and persistent across months of treatment. Sequential target-trial adjusted hazard ratios for late mortality (6–24 months post-landmark) range from *1.83 (95% CI 1.27–2.63) at month 6 to 2.85 (2.33–3.48) at month 3.
+- The excess is TB-specific.** Cause-specific HRs for TB-attributable death are 1.61–4.36 across months 1–6; non-TB death HRs are essentially null (0.96–1.48). This negative-control contrast supports a causal effect of interrupted TB therapy rather than residual selection.
+- The mortality surrounding return to care is largely attributable to the antecedent disengagement, not to re-entry. In a risk-set (incidence-density) matched analysis anchored at the time of return, patients who returned had markedly higher 24-month mortality than matched still-LTFU patients (HR 6.93, 95% CI 5.95–8.08) — an association reflecting confounding by indication, since return is typically prompted by recurrent or progressive disease. A g-computation counterfactual estimated that returning patients, whose observed 24-month mortality was 9.3%, would have experienced only 3.5% had they instead completed treatment — indicating the excess is driven by the disengagement itself. Within-LTFU IPCW and Bayesian-Cox analyses (appendix) give the same qualitative conclusion.
+- Early-window aHRs sit at or below unity** (range 0.63–1.16 across months 1–6) and reflect residual survival/selection biases that the target-trial design cannot fully eliminate, not a protective effect of disengagement.
+- Effect modification: relative penalty is largest in younger and stably housed individuals (where competing-mortality baseline is low) and smallest in homeless individuals and people aged ≥65 (where baseline mortality is already high).
 
 ## Repository layout
 
