@@ -66,8 +66,13 @@ if not C.MI_DIR.exists():
     print(f"[paths] ccw_v3.ROOT repointed to {C.ROOT}")
 
 HORIZON = 60
-PUBLISHED = {60: {"rr": 1.2367522921445866, "rd": 2.2240625382225376},   # ccw_bootstrap_h60.csv
-             24: {"rr": 1.1464629,          "rd": 1.2145260}}            # ccw_v3_shift30_main.csv, T=6
+# RE-BASELINED 2026-10-15 against the CORRECTED pipeline (ADR-0006: month-0
+# clones censored rather than deleted; ltfu-date convention `closure`).  The
+# previous constant, 2.2240625, matched no artifact in the tree -- the two files
+# carrying that quantity held 2.232325 and 2.227509 -- and the gate never fired
+# because the M>1 escape below waived it.  Source: ccw_v3_closure_main.csv,
+# T=6, all_cause, M=5, --horizon 60.
+PUBLISHED = {60: {"rr": 1.263228750134327, "rd": 2.44932675523881}}
 TOL = 5e-4
 
 
@@ -81,7 +86,7 @@ def set_horizon(h: int) -> None:
     C.REPORT_AT = sorted(set(list(C.REPORT_AT) + [h]))
 
 
-def load(n_imp: int, ltfu_date: str = "shift30"):
+def load(n_imp: int, ltfu_date: str = "closure"):
     lookup = C.build_cause_lookup()
     imp_files = sorted(C.MI_DIR.glob("imp_*.csv"))[:n_imp]
     assert imp_files, f"no imputations in {C.MI_DIR}"

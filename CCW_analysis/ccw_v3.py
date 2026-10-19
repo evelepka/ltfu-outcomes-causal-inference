@@ -66,6 +66,7 @@
 import argparse
 import hashlib
 import json
+import os
 import time
 from pathlib import Path
 
@@ -78,12 +79,24 @@ from sklearn.preprocessing import OneHotEncoder
 # ---------------------------------------------------------------------------
 # PATHS / CONFIG
 # ---------------------------------------------------------------------------
-ROOT = Path("/Users/jasonandrews/Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/"
-            ".shortcut-targets-by-id/18HafZqxrHeLVzpA6oYW-1cro9ygNfwVd/LTFU Paper")
+# ROOT was hardcoded to one collaborator's Drive mount until 2026-10-15, so the
+# script could not be run directly on any other machine -- every published run
+# went through a wrapper that reassigned it, which is why the committed file
+# could not reproduce its own outputs. Resolve it the way the rest of the
+# project does: the environment variable first, else the directory containing
+# CCW_analysis. No silent fallback -- an unresolvable root raises.
+ROOT = Path(os.environ.get("TB_ABANDONMENT_ROOT",
+                           Path(__file__).resolve().parents[1]))
 MI_DIR = ROOT / "ITT_Analysis/data/mi"
 RAW_CSV = ROOT / "Data/Final_table_cleaned.csv"
 OUTDIR = ROOT / "CCW_analysis/results_v3"
 CACHE = OUTDIR / "cause_lookup_fixedattr.csv"   # ADR-0003
+
+if not MI_DIR.exists():
+    raise SystemExit(
+        f"cannot resolve the project root: {MI_DIR} does not exist.\n"
+        f"ROOT is {ROOT}. Set TB_ABANDONMENT_ROOT to the directory that\n"
+        f"contains ITT_Analysis/ and Data/ (the Drive 'LTFU Paper' folder).")
 
 MONTH_DAYS = 30.4
 HORIZON_M = 24
@@ -263,7 +276,7 @@ def build_geo_lookup(verbose=True):
     return out
 
 
-def load_timeline(imp_path, cause_lookup, ltfu_date_mode="shift30", verbose=False):
+def load_timeline(imp_path, cause_lookup, ltfu_date_mode="closure", verbose=False):
     df = pd.read_csv(imp_path, low_memory=False)
     df = df.merge(cause_lookup, on="sinan_clean", how="left")
     # always merged, so no call site can fit without a covariate that is in COVS
@@ -369,7 +382,18 @@ def build_arm(tl, arm, T=None, cause="all_cause"):
     dev_binds = ((~has_event) & np.isfinite(m_dev) & (m_dev <= m_admin)
                  & (m_dev <= m_compete) & (m_dev < HORIZON_M))
 
-    keep = nmonths > 0
+    # A clone whose artificial censoring falls inside month 0 was AT RISK during
+    # month 0 and leaves at its end: that is CENSORING, not non-existence.
+    # Dropping it removed the loss from the IPCW's view entirely, so the weights
+    # had nothing to compensate with -- and only the "remain engaged" arm loses
+    # clones this way, which inflated the comparator's early risk and drove the
+    # negative early risk difference that Reviewer 1 (comment 2) and Reviewer 3
+    # queried on Figure 4. Giving them one month-0 row restores the symmetry.
+    # Corrected 2026-10-15. Holding the convention at shift30 (M=5, pooled) it
+    # moves the 60-month RD from 2.2323 to 2.2725 pp; with the convention also
+    # corrected to closure, to 2.4493. See docs/decisions/ADR-0006.
+    nmonths = np.maximum(nmonths, 1).astype(np.int32)
+    keep = np.ones(len(nmonths), dtype=bool)
     return {"nmonths": nmonths[keep],
             "event_month": np.where(has_event, m_event, np.inf)[keep],
             "dev_binds": dev_binds[keep],
@@ -687,11 +711,22 @@ def build_provenance(imp_files):
 
 
 def main():
+    global HORIZON_M, REPORT_AT, DISJOINT
     ap = argparse.ArgumentParser()
     ap.add_argument("--bootstrap", type=int, default=0)
     ap.add_argument("--rubin", action="store_true",
                     help="full M x B bootstrap with Rubin pooling (slower, cleaner)")
-    ap.add_argument("--ltfu-date", choices=["shift30", "closure"], default="shift30")
+    # DEFAULT CHANGED 2026-10-15: closure, not shift30.  "shift30" censors the
+    # "remain engaged" clone at the START of the interruption -- before 30 days
+    # have elapsed and so before the LTFU definition can possibly be met.  On
+    # that day the patient has not yet violated "never a 30+ day interruption";
+    # they could still return on day 20.  Censoring them there uses information
+    # that does not yet exist, and the strategy itself cannot even be STATED
+    # without future knowledge.  Under "closure" the strategy is the programmatic
+    # definition -- become lost to follow-up within the first T months -- and the
+    # 1,118 negative disengagement times that shift30 truncated to zero vanish.
+    # shift30 is retained as the appendix sensitivity.  See ADR-0006.
+    ap.add_argument("--ltfu-date", choices=["shift30", "closure"], default="closure")
     ap.add_argument("--subgroups", action="store_true")
     ap.add_argument("--disjoint", action="store_true",
                     help="disengage DURING month T (timing gradient) "
@@ -700,9 +735,18 @@ def main():
                     help="comma-separated: " + ",".join(CAUSES))
     ap.add_argument("--imputations", type=int, default=5)
     ap.add_argument("--seed", type=int, default=2026)
+    # ADDED 2026-10-15. Every 60-month figure in the paper came from editing
+    # HORIZON_M by hand on another machine, so the committed script could not
+    # reproduce its own published outputs. Both constants are read inside the
+    # functions at call time, so assigning here is sufficient.
+    ap.add_argument("--horizon", type=int, default=None,
+                    help="follow-up horizon in months (paper uses 60)")
     args = ap.parse_args()
 
-    global DISJOINT
+    if args.horizon is not None:
+        HORIZON_M = args.horizon
+        REPORT_AT = sorted(set(REPORT_AT + [args.horizon]))
+
     DISJOINT = args.disjoint
     OUTDIR.mkdir(parents=True, exist_ok=True)
     causes = [c.strip() for c in args.cause.split(",")]
