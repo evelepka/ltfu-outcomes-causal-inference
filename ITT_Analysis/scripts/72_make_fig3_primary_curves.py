@@ -45,7 +45,11 @@ spec = importlib.util.spec_from_file_location("ccw", ROOT / "CCW_analysis/ccw_v3
 ccw = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ccw)
 
-OUTDIR = ROOT / "Plos Medicine" / "R1" / "Figures" / "Draft"
+# Round-specific: set FIG_OUTDIR for a revision round (R2 onwards) rather
+# than editing this constant, so a rerun cannot silently overwrite the
+# figures of the round that was already submitted.
+OUTDIR = Path(os.environ.get("FIG_OUTDIR",
+                             ROOT / "Plos Medicine" / "R1" / "Figures" / "Draft"))
 RESULTS = ROOT / "ITT_Analysis" / "results"
 STEM = "LTFU_primary_curves"
 
@@ -206,8 +210,8 @@ for col, (title, level, (lo, hi), ymax) in enumerate(PANELS):
     axD.set_ylim(ylo, yhi)
     axD.set_ylabel("Risk difference (pp)", fontsize=8.2)
     axD.set_title(f"{LETTERS[col][1]}", fontsize=9, weight="bold", loc="left", pad=4)
-    axD.annotate(f"{rd:+.2f}\n({lo:.2f} to {hi:.2f})", (H, rd),
-                 xytext=(4, 0), textcoords="offset points", fontsize=7.6,
+    axD.annotate(f"{rd:+.2f}\n(95% CI [{lo:.2f}, {hi:.2f}])", (H, rd),
+                 xytext=(4, 0), textcoords="offset points", fontsize=6.8,
                  color=INK, weight="bold", va="center", linespacing=1.3)
 
     for ax_ in (axT, axD):

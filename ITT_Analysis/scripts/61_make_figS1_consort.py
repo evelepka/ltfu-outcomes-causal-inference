@@ -6,7 +6,15 @@ Design goals (per reviewer feedback):
   * clear vertical separation between the flow boxes;
   * boxes sized snugly to their content (no large empty margins inside boxes).
 
-Numbers are hard-coded and verified to add up at each step.
+2026-10-16: the numbers are no longer hard-coded. They were written out once
+and never rechecked, so the figure went on describing a cohort the pipeline had
+left behind: age <15 read 6,238 against 6,178, data inconsistencies 111 against
+1, pre-treatment deaths 2,063 against 549, end dates outside the window 17,624
+against 17,834, and no recorded treatment start 1,394 against 2,778. The chain
+still summed to 171,048 because every subtotal had been derived from the stale
+counts, so nothing looked wrong. They are now derived from Final_table_cleaned.csv
+with the same filter definitions as 01_itt_cohort_selection.py, in the order this
+figure presents them, and the script asserts that the chain closes on the cohort.
 
 2026-08-31: the final box read N = 171,069, twenty-one more than the cohort the
 paper reports, because the flow omitted the "identified only post-mortem"
@@ -16,8 +24,10 @@ absolute and pointed at the pre-rename "Abandonment Paper" tree, so the script
 could not write its own figure; it now resolves the repository root from its own
 location, as scripts 47 and 48 do.
 """
+import os
 from pathlib import Path
 
+import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -36,31 +46,90 @@ FINAL_FILL             = "#B8CCE4"
 PINK_FILL, PINK_EDGE   = "#FBE6E7", "#C0504D"
 ARROW_C                = "#3F3F3F"
 
-# ---- content ---------------------------------------------------------------
-# Main flow boxes: (bold title, N line)
+# ---- content: derived from the data, not typed ------------------------------
+# Same source and same filter definitions as 01_itt_cohort_selection.py, applied
+# in the order this figure presents them. Exclusion categories overlap, so the
+# order decides which category a person is counted under; the convention here
+# matches the Study population paragraph in the manuscript.
+_ROOT = Path(os.environ.get("TB_ABANDONMENT_ROOT", Path(__file__).resolve().parents[2]))
+_df = pd.read_csv(_ROOT / "Data" / "Final_table_cleaned.csv", low_memory=False)
+for _c in ("end_date", "dod", "tx_start"):
+    _df[_c] = pd.to_datetime(_df[_c], errors="coerce")
+
+# comprehensive death date: the `dod` field or an Obito treatment outcome
+_a = _df.dropna(subset=["dod"]).groupby("sinan_clean")["dod"].max()
+_b = (_df[_df.case_outcome.isin({"Obito TB", "Obito NTB"})].dropna(subset=["end_date"])
+        .groupby("sinan_clean")["end_date"].max())
+_death = pd.concat([_a, _b], axis=1).max(axis=1).rename("death_date")
+
+n_total = _df.sinan_clean.nunique()
+_novo = _df[_df.case_type.str.strip().str.title() == "Novo"]
+n_nonfirst = n_total - _novo.sinan_clean.nunique()
+
+_blank = _novo.case_outcome.isna() | (_novo.case_outcome.astype(str).str.strip() == "")
+_mud = _novo.case_outcome.eq("Mud Diag")
+_valid = _novo[~_blank & ~_mud]
+_lost = set(_novo.sinan_clean) - set(_valid.sinan_clean)
+_sub = _novo[_novo.sinan_clean.isin(_lost)]
+_s_mud = set(_sub[_sub.case_outcome.eq("Mud Diag")].sinan_clean)
+_s_blank = set(_sub[_blank.loc[_sub.index]].sinan_clean)
+n_muddiag = len(_s_mud - _s_blank)
+n_missing = len(_s_blank)                      # absorbs those meeting both criteria
+n_firstep = _valid.sinan_clean.nunique()
+
+_first = _valid.sort_values("end_date").groupby("sinan_clean", as_index=False).first()
+_TR = {"Transf Outro Municipio", "Transf Outro Estado/Pais"}
+n_transfer = int(_first.case_outcome.isin(_TR).sum())
+_c = _first[~_first.case_outcome.isin(_TR)].join(_death, on="sinan_clean")
+
+def _drop(frame, keep):
+    return int((~keep).sum()), frame[keep]
+
+# The date checks are reported together, as the Study population section does:
+# a record whose treatment start is missing and one whose end date precedes its
+# start are both unusable for time-on-treatment alignment, for the same reason.
+n_age,       _c = _drop(_c, _c.age_tb >= 15)
+n_predeath,  _c = _drop(_c, ~(_c.death_date.notna() & (_c.death_date <= _c.tx_start)))
+n_consistent = len(_c)
+n_window,    _c = _drop(_c, _c.end_date.notna()
+                        & (_c.end_date >= pd.Timestamp("2013-01-01"))
+                        & (_c.end_date <= pd.Timestamp("2023-12-31")))
+n_txdates,   _c = _drop(_c, _c.tx_start.notna() & ~(_c.end_date < _c.tx_start))
+n_postmortem, _c = _drop(_c, _c.disease_discovery != "Descob. Apos Obito")
+n_cohort = len(_c)
+
+# the chain must close on the cohort the paper reports
+assert n_total - n_nonfirst - n_muddiag - n_missing == n_firstep, "box 2 does not close"
+assert n_firstep - n_transfer - n_age - n_predeath == n_consistent, "box 3"
+assert n_consistent - n_window - n_txdates - n_postmortem == n_cohort, "box 4"
+_expected = len(pd.read_csv(_ROOT / "ITT_Analysis" / "data" / "itt_cohort.csv",
+                            usecols=["sinan_clean"], low_memory=False))
+assert n_cohort == _expected, f"flow ends at {n_cohort:,}, cohort file has {_expected:,}"
+print(f"[61] derived chain closes on {n_cohort:,}")
+
+def _n(x): return f"{x:,}"
+
 flow = [
-    ("TBweb notifications, 2013 to 2023", "N = 235,629"),
-    ("First TB episode, eligible record", "N = 200,300"),
-    ("Resident, adult, with consistent data", "N = 190,087"),
+    ("TBweb records, 2013 to 2023", f"N = {_n(n_total)} individuals"),
+    ("First TB episode, eligible record", f"N = {_n(n_firstep)}"),
+    ("Resident, adult, with consistent data", f"N = {_n(n_consistent)}"),
     ("Primary cohort: treatment within study\nperiod and with recorded start date",
-     "N = 171,048"),
+     f"N = {_n(n_cohort)}"),
 ]
 
-# Exclusion boxes sit in the gap between successive flow boxes.
 excl = [
     ["Excluded:",
-     "Subsequent (non-first) notifications, n = 16,347",
-     "Change of diagnosis, n = 6,552",
-     "Missing or incomplete outcome, n = 12,430"],
+     f"No first-episode (new case) record, n = {_n(n_nonfirst)}",
+     f"Change of diagnosis, n = {_n(n_muddiag)}",
+     f"Missing or incomplete outcome, n = {_n(n_missing)}"],
     ["Excluded:",
-     "Inter-state transfer during treatment, n = 1,801",
-     "Age < 15 years, n = 6,238",
-     "Data inconsistencies, n = 111",
-     "Pre-treatment deaths, n = 2,063"],
+     f"Inter-state transfer during treatment, n = {_n(n_transfer)}",
+     f"Age < 15 years, n = {_n(n_age)}",
+     f"Pre-treatment deaths, n = {_n(n_predeath)}"],
     ["Excluded:",
-     "End dates outside 2013 to 2023, n = 17,624",
-     "No recorded treatment start date, n = 1,394",
-     "Identified only post-mortem, n = 21"],
+     f"End dates outside 2013 to 2023, n = {_n(n_window)}",
+     f"Missing or inconsistent treatment dates, n = {_n(n_txdates)}",
+     f"Identified only post-mortem, n = {_n(n_postmortem)}"],
 ]
 
 # ---- geometry (all in inches) ----------------------------------------------

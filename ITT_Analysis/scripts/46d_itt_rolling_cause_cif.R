@@ -179,27 +179,72 @@ fit_cause <- function(tr, which_cause, covars, within_month) {
   # interval with numerical noise rather than sampling variability. So
   # non-convergence is treated exactly like an error: warm-start it, and if that
   # still will not converge, drop the replicate and say so in the count.
-  ok <- function(o, imax) !is.null(o) && isTRUE(o$iter < imax)
+  # A PENALISED fit reports iter as c(outer, inner), so the original
+  # `isTRUE(o$iter < imax)` was FALSE for every such fit -- a length-2 logical
+  # is never isTRUE(). With a municipality term that judged every fit
+  # non-converged, sent it down the warm-start path, failed again and returned
+  # NULL: the script would have produced nothing, silently. all() is correct for
+  # both shapes.
+  ok <- function(o, imax) !is.null(o) && all(o$iter < imax)
 
+  # Observability. Every exit from this function used to be a bare
+  # return(NULL), so a dropped bootstrap replicate said nothing about which of
+  # half a dozen conditions fired. MUNI_DEBUG=1 names the exit.
+  dbg <- nzchar(Sys.getenv("MUNI_DEBUG", unset = ""))
+  bail <- function(why) { if (dbg) cat(sprintf("      [cif] desistiu: %s\n", why)); NULL }
+
+  mterm <- muni_term(sp)
+  # A penalised fit needs more inner Newton steps than an unpenalised one: with
+  # 640 shrunk municipality levels the observed counts run 9 to 62, against
+  # coxph's default ceiling of 20. The first attempt was therefore stopping at
+  # its own limit, not at an optimum, and the warm-start retry at 100 then hit
+  # 100 exactly on the thinner causes. The requirement is unchanged -- a fit
+  # that stops iterating is still rejected -- only the ceiling moves, and the
+  # gate below is checked against the ceiling actually used.
+  IT1 <- if (nzchar(mterm)) 120L else 20L
+  IT2 <- if (nzchar(mterm)) 600L else 100L
   f <- as.formula(paste("Surv(tstart, time_out, event_out) ~",
-                        paste(c(exv, cv, tday), collapse = " + ")))
-  fit <- tryCatch(coxph(f, data = sp, cluster = pid, ties = "efron",
-                        x = FALSE, model = TRUE), error = function(e) NULL)
-  if (!ok(fit, 20)) {
+                        paste(c(exv, cv, tday), collapse = " + "), mterm))
+  fit <- fit_cox(f, sp, mterm, control = coxph.control(iter.max = IT1),
+                 x = FALSE, model = TRUE)
+  if (dbg) cat(sprintf("      [cif] 1a tentativa: %s  iter=%s\n",
+                       if (is.null(fit)) "NULL" else "ok",
+                       if (is.null(fit)) "-" else paste(fit$iter, collapse=",")))
+  if (!ok(fit, IT1)) {
     f0 <- as.formula(paste("Surv(tstart, time_out, event_out) ~",
-                           paste(c(exv, cv), collapse = " + ")))
+                           paste(c(exv, cv), collapse = " + "), mterm))
     fit0 <- tryCatch(coxph(f0, data = sp, ties = "efron"), error = function(e) NULL)
-    if (is.null(fit0)) return(NULL)
-    nm  <- colnames(model.matrix(f, data = sp))[-1]
+    if (is.null(fit0)) return(bail("fit0 sem o termo de tempo falhou"))
+    # The warm start is what makes the thin causes converge at all -- see the
+    # note above on ex_p3 swinging between Newton steps. An earlier version
+    # skipped it whenever a municipality term was present, because
+    # model.matrix() does not expand a frailty() special and `init` came out
+    # the wrong length. Removing it removed the very thing these fits need, and
+    # the non-convergence that followed was then mistaken for a penalty
+    # problem. The names are instead taken from the formula WITHOUT the
+    # frailty term: in a penalised coxph the coefficient vector holds the fixed
+    # effects only, and the frailty coefficients live in fit$frail.
+    f_fix <- as.formula(paste("Surv(tstart, time_out, event_out) ~",
+                              paste(c(exv, cv, tday), collapse = " + ")))
+    nm  <- colnames(model.matrix(f_fix, data = sp))[-1]
     ini <- setNames(rep(0, length(nm)), nm)
     common <- intersect(nm, names(coef(fit0)))
     ini[common] <- coef(fit0)[common]
-    fit <- tryCatch(coxph(f, data = sp, cluster = pid, ties = "efron", init = ini,
-                          control = coxph.control(iter.max = 100),
-                          x = FALSE, model = TRUE), error = function(e) NULL)
-    if (!ok(fit, 100)) return(NULL)
+    # A dense frailty expects starting values for its own levels too, after the
+    # fixed effects and in that order; zero is the right start for a shrunk
+    # intercept. Lengths other than fixed + levels are refused outright.
+    if (nzchar(mterm))
+      ini <- c(unname(ini), rep(0, nlevels(droplevels(sp$muni_p))))
+    fit <- fit_cox(f, sp, mterm, init = ini,
+                   control = coxph.control(iter.max = IT2),
+                   x = FALSE, model = TRUE)
+    if (dbg) cat(sprintf("      [cif] 2a tentativa: %s  iter=%s\n",
+                         if (is.null(fit)) "NULL" else "ok",
+                         if (is.null(fit)) "-" else paste(fit$iter, collapse=",")))
+    if (!ok(fit, IT2))
+      return(bail(sprintf("nao convergiu em %d iteracoes internas", IT2)))
   }
-  if (is.null(fit)) return(NULL)
+  if (is.null(fit)) return(bail("fit nulo"))
   list(fit = fit, sp = sp, exv = exv, n_ev = sum(d$event_out))
 }
 
@@ -216,7 +261,16 @@ h0_on_grid <- function(fit, grid) {
 cif_standardized <- function(tr, covars, within_month) {
   fits <- lapply(CAUSES, function(k) fit_cause(tr, k, covars, within_month))
   names(fits) <- CAUSES
-  if (any(vapply(fits, is.null, logical(1)))) return(NULL)
+  # All three causes must fit: the CIFs are assembled from the same survival
+  # curve, so a missing cause makes the parts stop summing to the whole. One
+  # failure therefore discards the replicate -- which is why it is worth saying
+  # WHICH cause failed.
+  bad <- names(fits)[vapply(fits, is.null, logical(1))]
+  if (length(bad)) {
+    if (nzchar(Sys.getenv("MUNI_DEBUG", unset = "")))
+      cat(sprintf("      [cif] causa(s) sem ajuste: %s\n", paste(bad, collapse = ", ")))
+    return(NULL)
+  }
 
   grid <- seq(0, HZ, length.out = NGRID + 1)
 
@@ -434,13 +488,28 @@ if (B > 0) {
     sb <- add_ev(build_rolling(dd, comparator = "in_care",
                                carry = CARRY, seed = 7000L + 13L * b))
     rows <- list()
-    r <- tryCatch(cif_standardized(sb, COVARS, FALSE), error = function(e) NULL)
+    # A dropped replicate used to vanish without a word, so "0 replicates
+    # completed" gave no clue which of a dozen causes applied. Report the first
+    # few and then count.
+    r <- tryCatch(cif_standardized(sb, COVARS, FALSE),
+                  error = function(e) {
+                    if (b <= 3) cat(sprintf("    rep %d overall FALHOU: %s\n",
+                                            b, conditionMessage(e)))
+                    NULL
+                  })
+    if (is.null(r) && b <= 3)
+      cat(sprintf("    rep %d overall: cif_standardized devolveu NULL\n", b))
     if (!is.null(r)) { r$dmon <- NA_integer_; rows[[length(rows) + 1]] <- r }
     if (BOOT_BYMONTH) {
       sb$dmon <- pmin(ceiling(sb$trial_day / 30.4), 6)
       for (m in 1:6) {
         rm_ <- tryCatch(cif_standardized(sb[sb$dmon == m, , drop = FALSE],
-                                         COVARS, TRUE), error = function(e) NULL)
+                                         COVARS, TRUE),
+                        error = function(e) {
+                          if (b <= 3) cat(sprintf("    rep %d mes %d FALHOU: %s\n",
+                                                  b, m, conditionMessage(e)))
+                          NULL
+                        })
         if (!is.null(rm_)) { rm_$dmon <- m; rows[[length(rows) + 1]] <- rm_ }
       }
     }
