@@ -92,6 +92,9 @@ cat(sprintf("  trials=%d  rows=%s  exposed=%s\n",
             length(unique(s1$trial_day)), format(nrow(s1), big.mark = ","),
             format(sum(s1$expose), big.mark = ",")))
 
+# Replicates for the patient block bootstrap, used only when MUNI_ADJUST is on.
+BOOT_B <- as.integer(Sys.getenv("BOOT_B", unset = "300"))
+
 CONFIGS <- list(list(model = "overall", cap = CAP5),
                 list(model = "early",   cap = 0.5),
                 list(model = "late",    cap = CAP5))
@@ -101,8 +104,8 @@ cat("\n--- cause-specific, cap = 5 y ---\n")
 for (cs in c("all_cause", CAUSES)) {
   cause_col <- if (cs == "all_cause") NULL else cs
   for (cfg in CONFIGS) {
-    pl <- pooled_expose(lapply(stacks, fit_rolling, model = cfg$model,
-                               cap = cfg$cap, cause = cause_col))
+    pl <- expose_ci(stacks, model = cfg$model, cap = cfg$cap,
+                    cause = cause_col, B = BOOT_B)
     if (is.null(pl)) {
       cat(sprintf("  %-14s %-8s -- not estimable\n", cs, cfg$model)); next
     }
@@ -179,8 +182,8 @@ for (cap in CC_CAPS) {
   cc_rows <- list()
   for (cs in CC_CAUSES) {
     cause_col <- if (cs == "all_cause") NULL else cs
-    fit <- fit_rolling(cc_stack, model = "overall", cap = cap, cause = cause_col)
-    pl  <- pooled_expose(list(fit))
+    pl <- expose_ci(list(cc_stack), model = "overall", cap = cap,
+                    cause = cause_col, B = BOOT_B)
     if (is.null(pl)) { cat(sprintf("  %-14s -- not estimable\n", cs)); next }
     tr <- prep_outcome(cc_stack, "overall", cap, cause_col)
     r  <- ref[ref$cause == cs, ]
