@@ -65,10 +65,12 @@ fit_flex <- function(tr, covars, within_month) {
   cv  <- drop_constant(sp, covars)
   # inside one month trial_day spans ~30 d: linear. across all months: spline.
   tday <- if (within_month) "trial_day" else "ns(trial_day, df = 3)"
+  mterm <- muni_term(sp)
   f <- as.formula(paste("Surv(tstart, time_out, event_out) ~",
-                        paste(c(exv, cv, tday), collapse = " + ")))
-  fit <- tryCatch(coxph(f, data = sp, cluster = pid, ties = "efron",
-                        x = FALSE, model = TRUE), error = function(e) NULL)
+                        paste(c(exv, cv, tday), collapse = " + "), mterm))
+  # intervals for this script come from its own patient bootstrap, so the fit
+  # does not need -- and with a municipality term cannot have -- a cluster.
+  fit <- fit_cox(f, sp, mterm, x = FALSE, model = TRUE)
   if (is.null(fit)) return(NULL)
   list(fit = fit, sp = sp, exv = exv, tr = tr)
 }
@@ -103,10 +105,10 @@ std_risks_ph <- function(tr, covars, within_month) {
   if (sum(tr$event_out) < 20) return(NULL)
   cv <- drop_constant(tr, covars)
   tday <- if (within_month) "trial_day" else "ns(trial_day, df = 3)"
+  mterm <- muni_term(tr)
   f <- as.formula(paste("Surv(time_out, event_out) ~",
-                        paste(c("expose", cv, tday), collapse = " + ")))
-  fit <- tryCatch(coxph(f, data = tr, cluster = pid, ties = "efron",
-                        x = FALSE, model = TRUE), error = function(e) NULL)
+                        paste(c("expose", cv, tday), collapse = " + "), mterm))
+  fit <- fit_cox(f, tr, mterm, x = FALSE, model = TRUE)
   if (is.null(fit)) return(NULL)
   bh <- basehaz(fit, centered = FALSE)
   H0 <- function(t) { i <- findInterval(t, bh$time)

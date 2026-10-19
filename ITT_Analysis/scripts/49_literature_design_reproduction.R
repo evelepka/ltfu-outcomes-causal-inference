@@ -78,7 +78,8 @@ fit_one <- function(d, label) {
   cv <- drop_constant(d, COVARS)
   f <- tryCatch(
     coxph(as.formula(paste("Surv(t_out, e_out) ~ expose +",
-                           paste(cv, collapse = " + "))),
+                           paste(cv, collapse = " + "),
+                           muni_term(d))),
           data = d, ties = "efron"),
     error = function(e) NULL)
   if (is.null(f)) return(NULL)

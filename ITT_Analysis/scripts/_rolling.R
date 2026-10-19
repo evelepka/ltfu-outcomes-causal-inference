@@ -35,6 +35,33 @@ COVARS <- c("age_group", "sex", "race_clean", "edu_clean", "hiv_aids",
             "geo4")
 
 # ---------------------------------------------------------------------------
+# MUNICIPALITY ADJUSTMENT (Reviewer 1, comment 1, R2 round)
+# ---------------------------------------------------------------------------
+# Patients in the same municipality are not independent: programme quality
+# varies and municipality predicts disengagement strongly (ICC 8.4%, OR 3.17
+# between the 95th and 5th percentile municipality, dAIC 1106; patient-level
+# glmer, lme4 1.1.37). The CCW carries a municipality intercept in its
+# censoring-weight model; this is the same adjustment for the landmark, so that
+# a reviewer comparing the two designs does not find them adjusted differently
+# -- the reason COVARS is shared between them in the first place.
+#
+# It is a RIDGE term, not a COVARS entry. As a plain factor the 640 indicators
+# would be unpenalised fixed effects -- 218 municipalities have no LTFU event
+# at all -- and every subgroup routine would treat it as an ordinary covariate.
+# Ridge with theta = 1/sigma^2 is a Gaussian random intercept of variance
+# sigma^2, and unlike coxme it leaves basehaz() and predict(newdata) working,
+# which the g-formula standardisation in script 45 depends on.
+#
+# sigma^2 = 0.1151 is the ML estimate from a PATIENT-LEVEL model of the outcome
+# this model predicts: glmer(died within 5 y ~ 14 covariates + (1|muni)) on the
+# 120,366 patients with five years of follow-up or an earlier death. It is not
+# taken from the stacked data, where the same patient recurs in up to 20 trials
+# and a municipality effect is confounded with that repetition (coxme on the
+# stack returns 0.63 and 1.76 in two windows of the same data).
+MUNI_ADJUST <- identical(Sys.getenv("MUNI_ADJUST", unset = "0"), "1")
+MUNI_SIGMA2 <- as.numeric(Sys.getenv("MUNI_SIGMA2", unset = "0.1151"))
+
+# ---------------------------------------------------------------------------
 # Cause-of-death attribution
 # ---------------------------------------------------------------------------
 # Mirrors classify_cod() in 30e/30i INCLUDING the 2026-08-16 fix: the TBweb
@@ -201,15 +228,11 @@ build_outcome_lookup <- function(verbose = TRUE) {
 # 1.35% of non-LTFU, because LTFU patients are the ones with retreatment records.
 .rolling_cache <- new.env(parent = emptyenv())
 
-build_geo_lookup <- function(verbose = TRUE) {
-  if (!is.null(.rolling_cache$geo)) return(.rolling_cache$geo)
-  xw_path <- file.path(PROJECT_ROOT, "ITT_Analysis", "external",
-                       "municipality_typology_sp.csv")
-  if (!file.exists(xw_path))
-    stop("[geo] missing crosswalk: run 47_build_ibge_typology.py first")
-  xw <- read.csv(xw_path, stringsAsFactors = FALSE)[, c("municipality", "geo4")]
-  names(xw)[1] <- "tx_city"   # crosswalk column is `municipality`
-
+# City of the INDEX episode. Shared by build_geo_lookup() and
+# build_muni_lookup() so the typology and the municipality term can never be
+# derived from different city assignments for the same patient.
+.index_city <- function() {
+  if (!is.null(.rolling_cache$city)) return(.rolling_cache$city)
   raw <- read.csv(file.path(DATA_DIR, "Final_table_cleaned.csv"),
                   stringsAsFactors = FALSE)[, c("sinan_clean", "case_type",
                                                 "case_outcome", "end_date",
@@ -227,10 +250,31 @@ build_geo_lookup <- function(verbose = TRUE) {
   anyc <- anyc[!duplicated(anyc$sinan_clean), c("sinan_clean", "tx_city")]
   names(anyc)[2] <- "tx_city_any"
   first <- merge(first, anyc, by = "sinan_clean", all = TRUE)
-  first$tx_city <- ifelse(is.na(first$tx_city), first$tx_city_any, first$tx_city)
+  first$tx_city <- ifelse(is.na(first$tx_city), first$tx_city_any,
+                          first$tx_city)
+  out <- first[, c("sinan_clean", "tx_city")]
+  .rolling_cache$city <- out
+  out
+}
 
-  out <- merge(first[, c("sinan_clean", "tx_city")], xw, by = "tx_city",
-               all.x = TRUE)
+# Municipality as an adjustment term; see the MUNI_ADJUST note above.
+build_muni_lookup <- function(verbose = TRUE) {
+  out <- .index_city()
+  if (verbose) cat(sprintf("  [muni] %d patients, %d municipalities\n",
+                           nrow(out), length(unique(out$tx_city))))
+  out
+}
+
+build_geo_lookup <- function(verbose = TRUE) {
+  if (!is.null(.rolling_cache$geo)) return(.rolling_cache$geo)
+  xw_path <- file.path(PROJECT_ROOT, "ITT_Analysis", "external",
+                       "municipality_typology_sp.csv")
+  if (!file.exists(xw_path))
+    stop("[geo] missing crosswalk: run 47_build_ibge_typology.py first")
+  xw <- read.csv(xw_path, stringsAsFactors = FALSE)[, c("municipality", "geo4")]
+  names(xw)[1] <- "tx_city"   # crosswalk column is `municipality`
+
+  out <- merge(.index_city(), xw, by = "tx_city", all.x = TRUE)
   cov <- mean(!is.na(out$geo4))
   if (cov < 0.999)
     stop(sprintf(paste0("[geo] crosswalk covers only %.2f%% of patients; ",
@@ -307,6 +351,17 @@ prepare_rolling <- function(path, cause_lookup = NULL, extra_factors = NULL,
   d$geo4 <- factor(ifelse(is.na(d$geo4), GEO_REF, as.character(d$geo4)))
   d$geo4 <- relevel(d$geo4, ref = GEO_REF)
 
+  # municipality: always attached, like geo4, so no calling script can forget
+  # it. Used only when MUNI_ADJUST is set; see the note at the top.
+  d <- merge(d, build_muni_lookup(verbose = FALSE), by = "sinan_clean",
+             all.x = TRUE)
+  d$muni <- factor(ifelse(is.na(d$tx_city), "__NA__", as.character(d$tx_city)))
+  # Pooled municipality, derived here and only here, from the full cohort.
+  # Attaching it alongside `muni` means every downstream data frame carries it,
+  # including the ones scripts build themselves (script 49 does) rather than
+  # through build_rolling().
+  d <- with_muni_p(d)
+
   d$pid <- seq_len(nrow(d))
   d
 }
@@ -362,7 +417,8 @@ build_rolling <- function(d, comparator = c("in_care", "alive_only"),
       expose = c(rep(1L, length(exp_i)), rep(0L, length(cmp_i))),
       time_raw = d$fu_y[idx] - origin_y,
       event_d_num = d$ev[idx],
-      d[idx, c(COVARS, carry), drop = FALSE],
+      d[idx, c(COVARS, "muni", "muni_p",
+               setdiff(carry, c("muni", "muni_p"))), drop = FALSE],
       stringsAsFactors = FALSE)
   }
   bind_rows(out)
@@ -398,7 +454,8 @@ build_primary_abandonment <- function(d, carry = character(0), seed = SEED) {
       expose = c(rep(1L, length(exp_i)), rep(0L, length(cmp_i))),
       time_raw = d$fu_y[idx] - origin_y,
       event_d_num = d$ev[idx],
-      d[idx, c(COVARS, carry), drop = FALSE],
+      d[idx, c(COVARS, "muni", "muni_p",
+               setdiff(carry, c("muni", "muni_p"))), drop = FALSE],
       stringsAsFactors = FALSE)
   }
   bind_rows(out)
@@ -426,6 +483,64 @@ prep_outcome <- function(tr, model, cap, cause = NULL) {
   tr[tr$time_out > 0, , drop = FALSE]
 }
 
+# The municipality random-intercept term, or "" when MUNI_ADJUST is off or the
+# data carry fewer than two municipalities (a subgroup stratum can collapse to
+# one).
+#
+# frailty(), NOT ridge(). `ridge()` begins with cbind(...), which turns a factor
+# into its INTEGER CODES: ridge(muni) fits one numeric column holding the
+# alphabetical rank of the city, not 640 indicators. The symptom is an aHR
+# identical to five decimals across a 40-fold range of theta, because a single
+# column is barely penalised either way. frailty() expands the factor properly;
+# its effective degrees of freedom then move with theta (88 at sigma^2 = 0.05,
+# 377 at 2.0), which is the check that the term is real.
+#
+# theta is FIXED at 1/sigma^2 rather than estimated. Estimating it on the
+# stacked data is not meaningful: the same patient recurs in up to 20 trials, so
+# a municipality effect is confounded with that repetition.
+# Municipalities below MUNI_MIN patients are pooled into one "__small__"
+# level before the term is built.
+#
+# WHY. Sao Paulo has 640 municipalities but ~7.6 EFFECTIVE clusters: 429 of
+# them hold fewer than 50 patients between them. Each still adds a parameter
+# the penalised Newton step has to place, and on the thinner causes that is
+# what stops the fit converging -- observed non-convergence at 600 inner
+# iterations for non-TB, where the fits that do converge need 9 to 62. Pooling
+# the small ones removes parameters that carry almost no information. The
+# script already applies the same idea to covariates via
+# collapse_sparse_levels(); this is that rule, applied to municipality.
+MUNI_MIN <- as.integer(Sys.getenv("MUNI_MIN", unset = "2000"))
+
+muni_pooled <- function(x) {
+  x <- as.character(x); x[is.na(x)] <- "__NA__"
+  n <- table(x)
+  small <- names(n)[n < MUNI_MIN]
+  x[x %in% small] <- "__small__"
+  factor(x)
+}
+
+muni_term <- function(tr) {
+  if (!MUNI_ADJUST) return("")
+  if (is.null(tr$muni) || length(unique(tr$muni[!is.na(tr$muni)])) < 2) return("")
+  # sparse = FALSE is required, not a preference. With the default sparse
+  # representation coxph accepts no `init` at all -- every length is refused --
+  # and the thin causes then have to start from zero, which is exactly what
+  # script 46d documents as divergent (600 inner iterations without settling).
+  # Dense, the term takes an ordinary `init` and converges in 4 steps. Dense is
+  # only affordable because MUNI_MIN pools the small municipalities: 640 levels
+  # dense costs 21 minutes a fit, 30 levels costs 31 seconds.
+  sprintf(" + frailty(muni_p, distribution = 'gaussian', theta = %.10f, sparse = FALSE)",
+          MUNI_SIGMA2)
+}
+
+# Attach the pooled factor. Callers run this on the data they are about to fit,
+# so the pooling reflects that data set -- a bootstrap replicate pools by its
+# own counts, as collapse_sparse_levels() does for covariates.
+with_muni_p <- function(tr) {
+  if (MUNI_ADJUST && !is.null(tr$muni)) tr$muni_p <- muni_pooled(tr$muni)
+  tr
+}
+
 drop_constant <- function(tr, vars) {
   vars[vapply(vars, function(v)
     length(unique(tr[[v]][!is.na(tr[[v]])])) > 1, logical(1))]
@@ -437,9 +552,23 @@ fit_rolling <- function(tr, model, cap, cause = NULL, covars = COVARS,
   if (sum(tr$event_out) < min_events) return(NULL)
   rhs <- paste(c("expose", drop_constant(tr, covars)), collapse = " + ")
   if (timing) rhs <- paste(rhs, "+ expose:splines::ns(trial_day, df = 3)")
+  # No pooling here either: muni_p arrives from prepare_rolling(). See fit_cox.
+  mterm <- muni_term(tr)
+  rhs <- paste0(rhs, mterm)
   f <- as.formula(paste("Surv(time_out, event_out) ~", rhs, "+ strata(trial_day)"))
-  tryCatch(coxph(f, data = tr, cluster = pid, ties = "efron"),
-           error = function(e) NULL)
+  # coxph cannot carry a penalised term and a robust cluster at once: both
+  # frailty(muni) + cluster = pid and frailty(muni) + cluster(pid) fail with
+  # "length of 'dimnames' [2] not equal to array extent". The cluster does not
+  # affect the point estimate, only the variance, so the municipality fit keeps
+  # the estimate and its standard error is NOT usable. Callers that quote an
+  # interval must take it from boot_expose(), which resamples patients as whole
+  # blocks and so handles the same repetition that cluster = pid approximates.
+  if (nzchar(mterm)) {
+    tryCatch(coxph(f, data = tr, ties = "efron"), error = function(e) NULL)
+  } else {
+    tryCatch(coxph(f, data = tr, cluster = pid, ties = "efron"),
+             error = function(e) NULL)
+  }
 }
 
 # Rubin pooling on the log-HR scale
@@ -451,6 +580,104 @@ pool_loghr <- function(est, se) {
   s <- sqrt(ubar + (1 + 1 / M) * bvar)
   list(hr = exp(qbar), lo = exp(qbar - 1.96 * s), hi = exp(qbar + 1.96 * s),
        p = 2 * stats::pnorm(-abs(qbar / s)), M = M)
+}
+
+# One place that knows coxph cannot hold a penalised term and a robust cluster
+# at the same time. Scripts that build their own formula call this instead of
+# coxph() directly, so the rule lives here and not in five copies.
+#
+# When the municipality term is present the fit carries no cluster, so its
+# standard error is NOT usable; the caller's interval must come from a
+# bootstrap that resamples patients as blocks.
+# The cluster is added as a FORMULA term, not as the `cluster =` argument.
+# coxph resolves that argument in the environment of the FORMULA, not of the
+# caller, so `cluster = data$pid` inside a function silently fails to find
+# `data` and the fit dies. A `+ cluster(pid)` term is resolved from the model
+# frame instead, and gives the identical coefficient and standard error.
+#
+# Errors are reported, not swallowed. An earlier version returned NULL on
+# error, so a broken fit surfaced only as an unrelated failure further
+# downstream; the cause took a separate debugging run to find.
+fit_cox <- function(f, data, mterm, ...) {
+  # Deliberately does NOT pool here. Pooling in two places was a real bug: the
+  # stack was pooled on the whole cohort and then re-pooled inside the fit on
+  # whatever subset it received, so a by-month analysis dropped cities that
+  # cleared the threshold overall, and predict() on the un-re-pooled rows then
+  # died with "factor ... has new levels BARUERI, BAURU, ...". The pooled
+  # factor is a covariate definition: it is derived ONCE, in prepare_rolling(),
+  # from the full cohort, and never recomputed.
+  if (!nzchar(mterm)) f <- stats::update(f, . ~ . + cluster(pid))
+  # The error is written straight to stderr, NOT raised as a warning: an
+  # earlier version raised one and then muffled every warning three lines
+  # later, so the message it existed to produce never appeared and a failing
+  # fit looked like a silent NULL.
+  withCallingHandlers(
+    tryCatch(coxph(f, data = data, ties = "efron", ...),
+             error = function(e) {
+               cat(sprintf("      [fit_cox] ERRO: %s\n", conditionMessage(e)),
+                   file = stderr())
+               NULL
+             }),
+    warning = function(w) invokeRestart("muffleWarning"))
+}
+
+# ---------------------------------------------------------------------------
+# PATIENT BLOCK BOOTSTRAP for the exposure log-HR
+# ---------------------------------------------------------------------------
+# WHY. A patient enters up to K_COMP + 1 trials, so stacked rows are not
+# independent. Without a municipality term `cluster = pid` handles that
+# analytically; with one, coxph refuses the combination (see fit_rolling), and
+# an unclustered model standard error would be too narrow. Resampling PATIENTS
+# as whole blocks addresses the same dependence without relying on the model's
+# variance at all, and it is the convention the CCW side of this project
+# already uses.
+#
+# Imputations are CYCLED, b %% M, as in ccw_v3.bootstrap(): one pass of B
+# replicates then propagates sampling and imputation uncertainty together.
+#
+# Returns the same shape as pool_loghr() so callers can swap one for the other.
+boot_expose <- function(stacks, model, cap, cause = NULL, covars = COVARS,
+                        B = 300, seed = SEED, verbose = FALSE) {
+  M <- length(stacks)
+  blocks <- lapply(stacks, function(tr) split(seq_len(nrow(tr)), tr$pid))
+  point <- pooled_expose(lapply(stacks, fit_rolling, model = model, cap = cap,
+                                cause = cause, covars = covars))
+  if (is.null(point)) return(NULL)
+  set.seed(seed)
+  est <- rep(NA_real_, B)
+  for (b in seq_len(B)) {
+    k  <- (b - 1) %% M + 1
+    bl <- blocks[[k]]
+    idx <- unlist(bl[sample.int(length(bl), length(bl), replace = TRUE)],
+                  use.names = FALSE)
+    fit <- fit_rolling(stacks[[k]][idx, , drop = FALSE], model = model,
+                       cap = cap, cause = cause, covars = covars)
+    if (!is.null(fit)) est[b] <- unname(coef(fit)["expose"])
+    if (verbose && b %% 25 == 0)
+      cat(sprintf("      boot %d/%d\n", b, B), file = stderr())
+  }
+  ok <- is.finite(est)
+  if (sum(ok) < 20) return(NULL)
+  q <- stats::quantile(est[ok], c(0.025, 0.975), names = FALSE)
+  list(hr = point$hr, lo = exp(q[1]), hi = exp(q[2]),
+       p = NA_real_, M = M, B_ok = sum(ok), source = "patient block bootstrap")
+}
+
+# Which interval a caller should quote. With a municipality term the model's
+# standard error carries no cluster and is too narrow (see fit_rolling), so the
+# interval must come from the patient block bootstrap. Without one, the
+# cluster-robust Rubin pooling is kept, so existing numbers are untouched.
+# Validated on 2026-10-17: with MUNI_ADJUST off the bootstrap reproduces the
+# robust interval to within Monte-Carlo error (width ratio 0.94 overall, 1.03
+# late, B = 200), so the change of method is not what moves any estimate.
+expose_ci <- function(stacks, model, cap, cause = NULL, covars = COVARS,
+                      B = 300, seed = SEED, verbose = FALSE) {
+  if (MUNI_ADJUST)
+    boot_expose(stacks, model = model, cap = cap, cause = cause,
+                covars = covars, B = B, seed = seed, verbose = verbose)
+  else
+    pooled_expose(lapply(stacks, fit_rolling, model = model, cap = cap,
+                         cause = cause, covars = covars))
 }
 
 pooled_expose <- function(fits) {
