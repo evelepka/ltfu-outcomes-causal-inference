@@ -458,10 +458,16 @@ cat(sprintf("\n[46d] wrote %s\n", out))
 # read straight into the summary below.
 # ---------------------------------------------------------------------------
 B <- as.integer(Sys.getenv("B", unset = "0"))
+# BOOT_UNIT (R2 round, Reviewer 1 comment 1): "patient" is the R1 behaviour;
+# "certainty" resamples by municipality with Sao Paulo city as a certainty unit
+# (certainty_draw() in _rolling.R), matching the CCW's primary interval. Give
+# such a run its own OUT_SUFFIX so it cannot overwrite a patient-level one.
+BOOT_UNIT <- Sys.getenv("BOOT_UNIT", unset = "patient")
 if (B > 0) {
   draws_path <- file.path(ITT_RESULTS_DIR,
                           sprintf("rolling_cause_cif_draws%s.csv", OUT_SUFFIX))
-  cat(sprintf("\n=== cluster bootstrap, B=%d ===\n", B))
+  cat(sprintf("\n=== cluster bootstrap, B=%d, unit=%s ===\n", B, BOOT_UNIT))
+  clus <- if (BOOT_UNIT == "certainty") lapply(prepped, certainty_blocks) else NULL
   cat(sprintf("  draws appended to %s after every replicate\n", basename(draws_path)))
   BOOT_BYMONTH <- nzchar(Sys.getenv("BOOT_BYMONTH", unset = ""))
   cat(sprintf("  scope: overall%s\n",
@@ -483,7 +489,9 @@ if (B > 0) {
 
   for (b in seq_len(B)) {
     d  <- prepped[[imp_pick[b]]]
-    dd <- d[sample.int(nrow(d), nrow(d), replace = TRUE), , drop = FALSE]
+    idx <- if (BOOT_UNIT == "certainty") certainty_draw(clus[[imp_pick[b]]])
+           else sample.int(nrow(d), nrow(d), replace = TRUE)
+    dd <- d[idx, , drop = FALSE]
     dd$pid <- seq_len(nrow(dd))
     sb <- add_ev(build_rolling(dd, comparator = "in_care",
                                carry = CARRY, seed = 7000L + 13L * b))

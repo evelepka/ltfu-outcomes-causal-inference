@@ -181,8 +181,15 @@ res <- bind_rows(rows)
 # per replicate so the interval carries imputation uncertainty too.
 # ---------------------------------------------------------------------------
 B <- as.integer(Sys.getenv("B", unset = "0"))
+# BOOT_UNIT (R2 round, Reviewer 1 comment 1): "patient" is the R1 behaviour;
+# "certainty" resamples by municipality -- certainty_draw() in _rolling.R, the
+# design the CCW's primary interval uses. OUT_SUFFIX keeps the outputs of
+# different units apart.
+BOOT_UNIT  <- Sys.getenv("BOOT_UNIT", unset = "patient")
+OUT_SUFFIX <- Sys.getenv("OUT_SUFFIX", unset = "")
 if (B > 0) {
-  cat(sprintf("\n=== cluster bootstrap, B=%d ===\n", B))
+  cat(sprintf("\n=== cluster bootstrap, B=%d, unit=%s ===\n", B, BOOT_UNIT))
+  clus <- if (BOOT_UNIT == "certainty") lapply(prepped, certainty_blocks) else NULL
   set.seed(4545)
   # MONTHS lets the decision cell be bootstrapped on its own: each replicate
   # fits one model per month, so restricting to month 6 is ~6x faster and the
@@ -193,7 +200,9 @@ if (B > 0) {
   draws <- list(); t0 <- Sys.time()
   for (b in seq_len(B)) {
     d  <- prepped[[imp_pick[b]]]
-    dd <- d[sample.int(nrow(d), nrow(d), replace = TRUE), , drop = FALSE]
+    idx <- if (BOOT_UNIT == "certainty") certainty_draw(clus[[imp_pick[b]]])
+           else sample.int(nrow(d), nrow(d), replace = TRUE)
+    dd <- d[idx, , drop = FALSE]
     dd$pid <- seq_len(nrow(dd))
     sb <- build_rolling(dd, comparator = "in_care", seed = SEED + 1000L * b)
     sb$dmon <- pmin(ceiling(sb$trial_day / 30.4), 6)
@@ -222,9 +231,10 @@ if (B > 0) {
   # Write immediately. A first attempt lost 300 replicates to an NA in the
   # printing loop below, because MONTHS had restricted the bootstrap and the
   # unbootstrapped months carry no interval.
-  write.csv(res, file.path(ITT_RESULTS_DIR, "rolling_rd_by_month_boot.csv"),
-            row.names = FALSE)
-  cat(sprintf("  draws persisted to rolling_rd_by_month_boot.csv\n"))
+  res$boot_unit <- BOOT_UNIT
+  boot_out <- sprintf("rolling_rd_by_month_boot%s.csv", OUT_SUFFIX)
+  write.csv(res, file.path(ITT_RESULTS_DIR, boot_out), row.names = FALSE)
+  cat(sprintf("  draws persisted to %s\n", boot_out))
 
   for (t in REPORT) {
     cat(sprintf("\n  --- horizon %g y, with %d-replicate CIs ---\n", t, B))
@@ -278,7 +288,7 @@ keep <- intersect(c("dmon","time_y","risk1","risk0","rd","rr","n_exposed",
                   names(res))
 ovk <- ov[, intersect(keep, names(ov))]
 allout <- bind_rows(ovk, res[, keep])
-write.csv(allout, file.path(ITT_RESULTS_DIR, "rolling_rd_by_month.csv"),
-          row.names = FALSE)
-cat(sprintf("\n[45b] wrote %d rows to rolling_rd_by_month.csv (dmon=NA is overall)\n",
-            nrow(allout)))
+main_out <- sprintf("rolling_rd_by_month%s.csv", OUT_SUFFIX)
+write.csv(allout, file.path(ITT_RESULTS_DIR, main_out), row.names = FALSE)
+cat(sprintf("\n[45b] wrote %d rows to %s (dmon=NA is overall)\n",
+            nrow(allout), main_out))

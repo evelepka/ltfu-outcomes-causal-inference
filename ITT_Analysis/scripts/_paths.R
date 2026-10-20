@@ -51,7 +51,11 @@ find_project_root <- function() {
 PROJECT_ROOT <- find_project_root()
 DATA_DIR <- file.path(PROJECT_ROOT, "Data")
 ITT_DATA_DIR <- file.path(PROJECT_ROOT, "ITT_Analysis", "data")
-ITT_RESULTS_DIR <- file.path(PROJECT_ROOT, "ITT_Analysis", "results")
+# RESULTS_OUT_DIR (2026-10-19) redirects WRITES to a local folder for runs of
+# many hours, so a Google Drive restart mid-run cannot cut a bootstrap short;
+# copy the outputs into ITT_Analysis/results when the run ends.
+ITT_RESULTS_DIR <- Sys.getenv("RESULTS_OUT_DIR",
+                              unset = file.path(PROJECT_ROOT, "ITT_Analysis", "results"))
 ITT_MI_DIR <- file.path(ITT_DATA_DIR, "mi")
 
 COHORT_CSV <- file.path(ITT_DATA_DIR, "itt_cohort.csv")

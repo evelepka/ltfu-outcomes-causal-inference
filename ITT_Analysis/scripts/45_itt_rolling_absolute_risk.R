@@ -121,7 +121,9 @@ strat_hr_overall <- function(tr, covars = COVARS) {
   unname(exp(coef(f)["expose"]))
 }
 coherent <- function(hr_unstrat, hr_strat) {
-  if (!is.finite(hr_unstrat) || !is.finite(hr_strat)) return(NA)
+  # isTRUE: a stratum whose fit returns no HR gives NA or a zero-length value,
+  # and `!is.finite(NA)` inside `if` stops the whole script (complete-case run)
+  if (!isTRUE(is.finite(hr_unstrat)) || !isTRUE(is.finite(hr_strat))) return(NA)
   abs(log(hr_unstrat / hr_strat)) <= log(1 + TOL)
 }
 
@@ -217,15 +219,23 @@ for (sg in SUBGRPS) {
 #     replicate, so the interval carries imputation uncertainty too.
 # Diagnostics below compare the bootstrap mean with the point estimate; a large
 # gap means the resampling is biased and the interval must not be used.
+# BOOT_UNIT (R2 round, Reviewer 1 comment 1): "patient" is the R1 behaviour;
+# "certainty" resamples by municipality (certainty_draw() in _rolling.R), as
+# 45b and 46d do for the primary landmark intervals.
+BOOT_UNIT <- Sys.getenv("BOOT_UNIT", unset = "patient")
 if (B > 0) {
-  cat(sprintf("\n--- cluster bootstrap (%d reps, per-rep seed + random imputation) ---\n", B))
+  cat(sprintf("\n--- cluster bootstrap (%d reps, unit=%s, per-rep seed + random imputation) ---\n",
+              B, BOOT_UNIT))
   set.seed(4545)
+  clus <- if (BOOT_UNIT == "certainty") lapply(prepped, certainty_blocks) else NULL
   imp_pick <- sample.int(length(prepped), B, replace = TRUE)
   bs <- vector("list", B)
   t0 <- Sys.time()
   for (b in seq_len(B)) {
     d  <- prepped[[imp_pick[b]]]
-    dd <- d[sample.int(nrow(d), nrow(d), replace = TRUE), , drop = FALSE]
+    idx <- if (BOOT_UNIT == "certainty") certainty_draw(clus[[imp_pick[b]]])
+           else sample.int(nrow(d), nrow(d), replace = TRUE)
+    dd <- d[idx, , drop = FALSE]
     dd$pid <- seq_len(nrow(dd))
     bs[[b]] <- standardized_risks(
       build_rolling(dd, comparator = "in_care", seed = SEED + 1000L * b))
