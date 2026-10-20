@@ -9,8 +9,12 @@ import pandas as pd, numpy as np
 from lifelines import KaplanMeierFitter, CoxPHFitter
 np.random.seed(42)
 
-B="/Users/jasonandrews/Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/.shortcut-targets-by-id/18HafZqxrHeLVzpA6oYW-1cro9ygNfwVd/Abandonment Paper"
-d=pd.read_csv(B+"/ITT_Analysis/data/itt_cohort.csv",low_memory=False)
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _paths import COHORT_CSV, ITT_RESULTS_DIR   # resolved, not hardcoded
+
+d=pd.read_csv(COHORT_CSV,low_memory=False)
 d['best_start']=pd.to_datetime(d.best_start,errors='coerce'); d['end_date']=pd.to_datetime(d.end_date,errors='coerce')
 d['tx_yrs']=(d.end_date-d.best_start).dt.days/365.25
 H=2.0

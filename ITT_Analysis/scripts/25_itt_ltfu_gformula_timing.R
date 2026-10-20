@@ -150,7 +150,11 @@ cat(sprintf("\nPlot saved to %s\n", img_path))
 
 # Dynamic Walkthrough Update Subroutine
 abs_img_path <- normalizePath(img_path)
-walkthrough_path <- "/Users/jasonandrews/.gemini/antigravity/brain/c053ef30-5842-41b7-b342-bf735650d865/walkthrough.md"
+# Optional, and off unless asked for. This block updated a walkthrough file
+# inside one collaborator's agent-tool scratch directory, so the path meant
+# nothing to anyone else and the repository is cited in the manuscript. Set
+# WALKTHROUGH_MD to a file to re-enable it.
+walkthrough_path <- Sys.getenv("WALKTHROUGH_MD", unset = "")
 
 if (file.exists(walkthrough_path)) {
     wt_text <- readLines(walkthrough_path)

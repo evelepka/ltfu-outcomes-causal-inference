@@ -3,9 +3,12 @@ Distinguishes RR/MDR vs INH-mono using rif and isoniazid signals."""
 import pandas as pd
 from statsmodels.stats.proportion import proportion_confint as ci
 
-ROOT = '/Users/jasonandrews/Google Drive/My Drive/Abandonment Paper'
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _paths import FINAL_TABLE_CSV   # resolved, not hardcoded
 
-src = pd.read_csv(f'{ROOT}/Data/Final_table_cleaned.csv', low_memory=False)
+src = pd.read_csv(FINAL_TABLE_CSV, low_memory=False)
 
 def classify(row):
     res = str(row['resistance']).upper().strip() if pd.notna(row['resistance']) else None

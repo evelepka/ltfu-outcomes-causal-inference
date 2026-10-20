@@ -75,6 +75,7 @@
 import argparse
 import json
 import time
+import os
 from pathlib import Path
 
 import numpy as np
@@ -85,8 +86,10 @@ from sklearn.preprocessing import OneHotEncoder
 # ---------------------------------------------------------------------------
 # CONFIGURATION
 # ---------------------------------------------------------------------------
-ROOT = Path("/Users/jasonandrews/Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/"
-            ".shortcut-targets-by-id/18HafZqxrHeLVzpA6oYW-1cro9ygNfwVd/LTFU Paper")
+# Resolved, not hardcoded: TB_ABANDONMENT_ROOT if set, else the directory
+# that contains this file's parent. Same rule as ccw_v3.py.
+ROOT = Path(os.environ.get("TB_ABANDONMENT_ROOT",
+                           Path(__file__).resolve().parents[1]))
 COHORT_CSV = ROOT / "ITT_Analysis/data/itt_cohort.csv"
 OUTDIR = ROOT / "CCW_analysis/results_v2"
 

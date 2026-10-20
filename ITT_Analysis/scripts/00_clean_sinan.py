@@ -33,13 +33,21 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-CSV_IN  = (
-    "/Users/jasonandrews/Library/CloudStorage/"
-    "GoogleDrive-jasonandr@gmail.com/My Drive/"
-    "TB Recurrence Predictors/Original data /Final table.csv"
-)
-OUT_DIR = Path("/Users/jasonandrews/.gemini/antigravity/scratch/"
-               "tb_recurrence_analysis/data")
+# The RAW SINAN extract lives outside this project -- it is the identifiable
+# source table, and it is never committed here -- so its location has to be
+# given rather than guessed. Everything downstream is resolved from the
+# project root as usual.
+import os, sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _paths import DATA_DIR
+
+CSV_IN = os.environ.get("SINAN_RAW_CSV", "")
+if not CSV_IN:
+    raise SystemExit(
+        "set SINAN_RAW_CSV to the raw SINAN extract (the 'Final table.csv'\n"
+        "export). It is identifiable patient data and is deliberately not in\n"
+        "this repository; see the data availability statement.")
+OUT_DIR = DATA_DIR
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 CSV_OUT      = OUT_DIR / "Final_table_cleaned.csv"
 CONFLICT_OUT = OUT_DIR / "sinan_conflicts.csv"

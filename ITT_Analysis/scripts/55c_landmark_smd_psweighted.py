@@ -25,12 +25,14 @@ from matplotlib.lines import Line2D
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
-BASE = Path('/Users/jasonandrews/Library/CloudStorage/GoogleDrive-jasonandr@gmail.com/'
-            '.shortcut-targets-by-id/18HafZqxrHeLVzpA6oYW-1cro9ygNfwVd/Abandonment Paper')
-MI_DIR  = BASE/'ITT_Analysis'/'data'/'mi'
-OUT_CSV = BASE/'ITT_Analysis'/'results'/'landmark_smd_psweighted.csv'
-OUT_PNG = BASE/'ITT_Analysis'/'results'/'landmark_smd_psweighted_loveplot.png'
-OUT_PDF = BASE/'ITT_Analysis'/'results'/'landmark_smd_psweighted_loveplot.pdf'
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _paths import ITT_MI_DIR, ITT_RESULTS_DIR   # resolved, not hardcoded
+
+MI_DIR  = ITT_MI_DIR
+OUT_CSV = ITT_RESULTS_DIR/'landmark_smd_psweighted.csv'
+OUT_PNG = ITT_RESULTS_DIR/'landmark_smd_psweighted_loveplot.png'
+OUT_PDF = ITT_RESULTS_DIR/'landmark_smd_psweighted_loveplot.pdf'
 
 M_LM_YR = 3.0/12.0
 
