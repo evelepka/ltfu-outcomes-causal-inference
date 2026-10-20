@@ -45,6 +45,23 @@ spec = importlib.util.spec_from_file_location("ccw", ROOT / "CCW_analysis/ccw_v3
 ccw = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ccw)
 
+# MUNICIPALITY ADJUSTMENT (R2 round, Reviewer 1 comment 1), on by default.
+# MUNI_RE=1: municipality random intercept in the censoring model, exactly as
+# CCW_analysis/ccw_random_intercept.py fits it, and bands from the certainty-unit
+# bootstrap (Sao Paulo city in every replicate with its patients resampled, the
+# other 639 municipalities resampled as whole blocks). MUNI_RE=0 reproduces the
+# R1 figure: no municipality term, patient-level bands.
+MUNI_RE = os.environ.get("MUNI_RE", "1") == "1"
+if MUNI_RE:
+    import sys
+    sys.path.insert(0, str(ROOT / "CCW_analysis"))
+    import ccw_random_intercept as RI
+    SIGMA = float(np.sqrt(RI.SIGMA2_DEFAULT))
+    # Same substitution ccw_subgroup_certainty.py makes: every pattern build in
+    # this script then carries the penalised municipality block.
+    ccw.attach_patterns = lambda tl, covs: RI.patterns(tl, SIGMA, covs=covs)
+SUFFIX = "_re_certainty" if MUNI_RE else ""
+
 # Round-specific: set FIG_OUTDIR for a revision round (R2 onwards) rather
 # than editing this constant, so a rerun cannot silently overwrite the
 # figures of the round that was already submitted.
@@ -67,9 +84,18 @@ DIFF = "#6A4C93"
 ccw.HORIZON_M = H
 
 lookup = ccw.build_cause_lookup(verbose=False)
-TLS = [ccw.load_timeline(p, lookup, verbose=False)
-       for p in sorted(ccw.MI_DIR.glob("imp_*.csv"))]
-print(f"[72] {len(TLS)} imputations")
+TLS, GROUPS, CAPS = [], [], []
+for p in sorted(ccw.MI_DIR.glob("imp_*.csv")):
+    tl = ccw.load_timeline(p, lookup, verbose=False)
+    if MUNI_RE:
+        tl["muni"] = RI.municipality(p, len(tl))
+        codes, uniq = pd.factorize(tl["muni"])
+        gp = RI.blocks(codes, len(uniq))
+        GROUPS.append(gp)
+        CAPS.append(int(np.argmax([len(g) for g in gp])))
+    TLS.append(tl)
+print(f"[72] {len(TLS)} imputations | municipality random intercept "
+      f"{'ON' if MUNI_RE else 'OFF'}")
 
 
 def curves(level=None):
@@ -97,7 +123,18 @@ def curves(level=None):
 # 60-month risk-difference curve rather than only the endpoint -- which is what
 # the previous bootstrap stored, and why a pointwise band was not available.
 B = int(os.environ.get("B", "0"))
-BAND_CSV = RESULTS / "fig3_primary_curve_bands.csv"
+BAND_CSV = RESULTS / f"fig3_primary_curve_bands{SUFFIX}.csv"
+
+
+def certainty_draw(rng, k):
+    """Row indices for one certainty-unit replicate of imputation k, the draw
+    ccw_random_intercept.py and ccw_subgroup_certainty.py use."""
+    gp, cap = GROUPS[k], CAPS[k]
+    others = [g for j, g in enumerate(gp) if j != cap]
+    pick = rng.integers(0, len(others), len(others))
+    big = gp[cap]
+    return np.concatenate([big[rng.integers(0, len(big), len(big))]]
+                          + [others[j] for j in pick])
 
 
 def boot_band(level, B, seed):
@@ -108,9 +145,18 @@ def boot_band(level, B, seed):
     out = []
     t0 = time.time()
     for b in range(B):
-        src = base[rng.integers(len(base))]
-        idx = rng.integers(0, len(src), len(src))
-        s = src.iloc[idx].reset_index(drop=True)
+        k = int(rng.integers(len(base)))
+        if MUNI_RE:
+            # resample the WHOLE cohort by municipality, then read the stratum
+            # off the resample -- as the subgroup bootstrap does, so a stratum's
+            # band reflects the same clustering as its 60-month interval
+            d = TLS[k].iloc[certainty_draw(rng, k)]
+            s = d if level is None else d[d[level[0]].to_numpy() == level[1]]
+            s = s.reset_index(drop=True)
+        else:
+            src = base[k]
+            idx = rng.integers(0, len(src), len(src))
+            s = src.iloc[idx].reset_index(drop=True)
         s, X = ccw.attach_patterns(s, covs)
         try:
             cur = {}
@@ -128,9 +174,15 @@ def boot_band(level, B, seed):
     return np.vstack(out)
 
 
-bs = pd.read_csv(ROOT / "CCW_analysis/results_v3/ccw_bootstrap_h60.csv")
-ov = bs[bs.estimate == "nested_T6"].iloc[0]
-sg = pd.read_csv(ROOT / "CCW_analysis/results_v3/ccw_subgroups_h60_bootstrap.csv")
+if MUNI_RE:
+    MAIN_CSV = ROOT / "CCW_analysis/results_v3/ccw_re_certainty_bootstrap_closure_h60.csv"
+    main_re = pd.read_csv(MAIN_CSV)
+    ov = main_re[main_re.month == H].iloc[0]
+    sg = pd.read_csv(ROOT / "CCW_analysis/results_v3/ccw_subgroups_re_certainty_h60_bootstrap.csv")
+else:
+    bs = pd.read_csv(ROOT / "CCW_analysis/results_v3/ccw_bootstrap_h60.csv")
+    ov = bs[bs.estimate == "nested_T6"].iloc[0]
+    sg = pd.read_csv(ROOT / "CCW_analysis/results_v3/ccw_subgroups_h60_bootstrap.csv")
 hp = sg[(sg.subgroup == "hiv_aids") & (sg.level == "Positive")].iloc[0]
 
 PANELS = [
@@ -142,10 +194,20 @@ PANELS = [
 # ---- bootstrap bands, computed once and cached ------------------------------
 bands = {}
 if B > 0:
-    for title, level, _, _ in PANELS:
-        print(f"  bootstrapping {title} (B={B})")
-        bands[title] = boot_band(level, B, seed=abs(hash(title)) % 10_000)
     rows_b = []
+    for title, level, _, _ in PANELS:
+        if MUNI_RE and level is None:
+            # The all-patients band already exists month by month from the
+            # B=1000 certainty-unit run that gives the primary interval; reuse
+            # it rather than drawing a second, smaller one that would disagree.
+            for _, r in main_re.iterrows():
+                rows_b.append(dict(group=title, month=int(r.month), rd_lo=r.rd_lo,
+                                   rd_hi=r.rd_hi, n_reps=int(r.B_ok)))
+            continue
+        print(f"  bootstrapping {title} (B={B})")
+        # a fixed per-panel seed: hash() of a str is salted per process, so the
+        # old seed=abs(hash(title)) drew different replicates on every run
+        bands[title] = boot_band(level, B, seed=2026 + len(bands))
     for title, arr in bands.items():
         for m in range(arr.shape[1]):
             rows_b.append(dict(group=title, month=m + 1,
@@ -169,6 +231,13 @@ for col, (title, level, (lo, hi), ymax) in enumerate(PANELS):
     rd_curve = r1 - r0
     rd = rd_curve[-1]
     print(f"  {title}: {r1[-1]:.2f}% vs {r0[-1]:.2f}%, RD {rd:+.2f} pp")
+    # The curve must end where the reported estimate is, or the figure and the
+    # text disagree. Tolerance covers pooling order only (mean of arm risks
+    # versus mean of per-imputation differences).
+    want = (ov if level is None else hp)["rd"]
+    if abs(rd - want) > 5e-3:
+        raise SystemExit(f"{title}: curve ends at {rd:.4f} pp but the source "
+                         f"CSV reports {want:.4f}; the figure would contradict the text")
     rows.append(dict(group=title, risk_disengage=r1[-1], risk_remain=r0[-1],
                      rd=rd, rd_lo=lo, rd_hi=hi))
     # the per-month point curve, saved because the nadir and the crossing month
@@ -236,6 +305,6 @@ for ext, kw in (("png", {"dpi": 300}), ("pdf", {}), ("svg", {})):
     fig.savefig(q, facecolor="white", bbox_inches="tight", pad_inches=0.12, **kw)
     print(f"wrote {q.relative_to(ROOT)}")
 plt.close(fig)
-pd.DataFrame(rows).to_csv(RESULTS / "fig3_primary_curves.csv", index=False)
-pd.DataFrame(curve_rows).to_csv(RESULTS / "fig3_primary_rd_curve.csv", index=False)
+pd.DataFrame(rows).to_csv(RESULTS / f"fig3_primary_curves{SUFFIX}.csv", index=False)
+pd.DataFrame(curve_rows).to_csv(RESULTS / f"fig3_primary_rd_curve{SUFFIX}.csv", index=False)
 print(pd.DataFrame(rows).round(2).to_string(index=False))

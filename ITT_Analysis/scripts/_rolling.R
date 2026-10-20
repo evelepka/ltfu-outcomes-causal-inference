@@ -541,6 +541,33 @@ with_muni_p <- function(tr) {
   tr
 }
 
+# CERTAINTY-UNIT CLUSTER BOOTSTRAP (R2 round, Reviewer 1 comment 1)
+# The landmark's intervals came from resampling patients, which treats patients
+# in one municipality as independent. These resample by municipality with Sao
+# Paulo city -- 33.5% of the cohort, ~7.6 effective clusters in all -- as a
+# certainty unit: it enters every replicate with its patients resampled, and
+# the other municipalities are resampled as whole blocks. Same design as
+# CCW_analysis/ccw_random_intercept.py --boot-unit certainty, so both designs'
+# intervals reflect the same clustering. Uses the REAL municipality (`muni`),
+# never the pooled `muni_p`: pooling is for the model, not the sampling unit.
+#
+#   blk <- certainty_blocks(prepped[[k]])   # once per imputation
+#   idx <- certainty_draw(blk)              # per replicate; d[idx, ] as usual
+certainty_blocks <- function(d) {
+  if (is.null(d$muni)) stop("certainty_blocks: data carry no `muni` column")
+  m <- as.character(d$muni); m[is.na(m)] <- "__NA__"
+  rows <- split(seq_len(nrow(d)), m)
+  cap <- names(rows)[which.max(lengths(rows))]
+  list(capital = rows[[cap]], others = unname(rows[names(rows) != cap]),
+       capital_name = cap)
+}
+
+certainty_draw <- function(blk) {
+  k <- length(blk$others)
+  c(blk$capital[sample.int(length(blk$capital), length(blk$capital), replace = TRUE)],
+    unlist(blk$others[sample.int(k, k, replace = TRUE)], use.names = FALSE))
+}
+
 drop_constant <- function(tr, vars) {
   vars[vapply(vars, function(v)
     length(unique(tr[[v]][!is.na(tr[[v]])])) > 1, logical(1))]
