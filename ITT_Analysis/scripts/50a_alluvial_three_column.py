@@ -68,15 +68,18 @@ OBITO_OUTCOMES = {"Obito TB", "Obito NTB"}
 
 # Palette — muted pastels with strong accent for each outcome.
 # Short labels keep text inside their column; count/% appended by renderer.
+# R2 round (PLOS editorial request): no red/green pairing. Cured and Lost to
+# follow up sit side by side in column 2 and were green and red; both are now
+# Okabe-Ito colours (blue, vermillion), the palette Figures 4 and 5 use.
 NODE_COLORS = {
     "Index Loss to Follow Up":       "rgba(142,  68, 173, 0.90)",  # purple
-    "Retreatment":                   "rgba( 41, 128, 185, 0.90)",  # blue
+    "Retreatment":                   "rgba( 86, 180, 233, 0.90)",  # sky blue
     "Died (no retreatment)":         "rgba( 44,  62,  80, 0.90)",  # dark
     "No further outcome":            "rgba(176, 190, 197, 0.90)",  # grey
-    "Lost to follow up":             "rgba(231,  76,  60, 0.90)",  # red
-    "Cured":                         "rgba( 46, 204, 113, 0.90)",  # green
+    "Lost to follow up":             "rgba(213,  94,   0, 0.90)",  # vermillion
+    "Cured":                         "rgba(  0, 114, 178, 0.90)",  # blue
     "Died":                          "rgba( 44,  62,  80, 0.90)",  # dark
-    "Failure":                       "rgba(230, 126,  34, 0.90)",  # orange
+    "Failure":                       "rgba(204, 121, 167, 0.90)",  # reddish purple
     "Other":                         "rgba(176, 190, 197, 0.90)",
 }
 LINK_COLORS = {k: v.replace("0.90", "0.32") for k, v in NODE_COLORS.items()}

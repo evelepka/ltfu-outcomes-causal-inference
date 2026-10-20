@@ -27,8 +27,10 @@ mind when wording the claim: the figure will not show it.
 
 SOURCES
 -------
-  A  ITT_Analysis/results/rolling_rd_by_month_boot.csv   (script 45b, B=300, M=5)
-  B  CCW_analysis/results_v3/ccw_subgroups_h60_bootstrap.csv  (B=300, M=5, 60 mo)
+  A  ITT_Analysis/results/rolling_rd_by_month_boot_certainty.csv   (script 45b, B=300, M=5,
+     BOOT_UNIT=certainty; MUNI_RE=0 for the R1 file rolling_rd_by_month_boot.csv)
+  B  CCW_analysis/results_v3/ccw_subgroups_re_certainty_h60_bootstrap.csv  (B=300, M=5, 60 mo;
+     MUNI_RE=0 for the R1 file ccw_subgroups_h60_bootstrap.csv)
   C  same file
 
 Two subgroup cells are marked as not reportable in docs/number-registry.csv
@@ -58,10 +60,18 @@ HZ = float(os.environ.get("HZ", "5"))          # horizon for panel A
 BLUE, VERM, GREY = "#0072B2", "#D55E00", "#999999"
 
 # ---------------------------------------------------------------- data ------
-a = pd.read_csv(RES / "rolling_rd_by_month_boot.csv")
+# R2 round (Reviewer 1 comment 1): panels A and B now come from the
+# municipality-adjusted subgroups -- random intercept in the censoring model,
+# certainty-unit cluster bootstrap -- and panel C from the landmark timing with
+# the same certainty-unit resampling (45b, BOOT_UNIT=certainty). MUNI_RE=0
+# redraws the R1 version.
+MUNI_RE = os.environ.get("MUNI_RE", "1") == "1"
+a = pd.read_csv(RES / ("rolling_rd_by_month_boot_certainty.csv" if MUNI_RE
+                       else "rolling_rd_by_month_boot.csv"))
 a = a[(a.dmon.notna()) & (a.time_y == HZ)].sort_values("dmon")
 
-s = pd.read_csv(CCW / "ccw_subgroups_h60_bootstrap.csv")
+s = pd.read_csv(CCW / ("ccw_subgroups_re_certainty_h60_bootstrap.csv" if MUNI_RE
+                       else "ccw_subgroups_h60_bootstrap.csv"))
 
 # Order the subgroup rows for display, grouped by variable.
 ORDER = [
@@ -171,6 +181,8 @@ fig.text(0.5, -0.02,
 
 fig.tight_layout()
 for ext in ("png", "pdf"):
-    out = RES / f"Figure_4_revised_{int(HZ)}y.{ext}"
+    # Round-specific: set FIG_OUTDIR for a revision round so a rerun cannot
+    # overwrite the figures of the round already submitted.
+    out = pathlib.Path(os.environ.get("FIG_OUTDIR", RES)) / f"Figure_4_revised_{int(HZ)}y.{ext}"
     fig.savefig(out, dpi=300, bbox_inches="tight")
     print("wrote", out)
