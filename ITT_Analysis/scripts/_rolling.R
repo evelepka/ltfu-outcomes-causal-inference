@@ -537,7 +537,12 @@ muni_term <- function(tr) {
 # so the pooling reflects that data set -- a bootstrap replicate pools by its
 # own counts, as collapse_sparse_levels() does for covariates.
 with_muni_p <- function(tr) {
-  if (MUNI_ADJUST && !is.null(tr$muni)) tr$muni_p <- muni_pooled(tr$muni)
+  # Built whenever `muni` is present, NOT only when MUNI_ADJUST is on.
+  # build_rolling() carries muni_p unconditionally, so gating its creation on
+  # the flag made every landmark script fail with "undefined columns selected"
+  # in the default configuration -- the one anyone cloning this repository
+  # runs. The column is inert when the flag is off: nothing reads it.
+  if (!is.null(tr$muni)) tr$muni_p <- muni_pooled(tr$muni)
   tr
 }
 
