@@ -47,7 +47,7 @@ stopifnot(length(imp_files) > 0)
 # shares materially; using the same input makes the reproduction check exact.
 prepped <- prepare_rolling(imp_files[1], cause_lookup = lookup)
 s1 <- build_rolling(prepped, comparator = "in_care",
-                    carry = c("tb_hybrid", "nontb_hybrid"))
+                    carry = c("tb_hybrid", "nontb_hybrid", "tb_simonly", "nontb_simonly"))
 
 WINDOWS <- list(
   list(label = "late (0.5-2 y, as previously reported)", lo = 0.5,  hi = 2),
@@ -67,6 +67,9 @@ for (w in WINDOWS) {
               pct_unclassified = 100 * mean(unclassified),
               n_tb = sum(tb_hybrid),
               n_nontb = sum(nontb_hybrid),
+              # 2026-10-23: cause classifiable from the death certificate (SIM
+              # ICD-10 code) alone, for the Results sentence on cause sources
+              pct_sim_classified = 100 * mean(tb_simonly | nontb_simonly),
               .groups = "drop")
   agg$arm    <- ifelse(agg$expose == 1, "LTFU", "in care")
   agg$window <- w$label
@@ -83,7 +86,7 @@ for (w in WINDOWS) {
 
 out <- bind_rows(rows)[, c("window", "lo", "hi", "arm", "expose", "n_deaths",
                            "n_unclassified", "pct_unclassified", "n_tb",
-                           "n_nontb")]
+                           "n_nontb", "pct_sim_classified")]
 write.csv(out, file.path(ITT_RESULTS_DIR, "rolling_cause_unclassified.csv"),
           row.names = FALSE)
 cat(sprintf("\n  wrote %s\n",
